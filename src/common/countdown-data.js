@@ -1,9 +1,5 @@
 import browser from "webextension-polyfill";
 
-let jeeExamDate = new Date(2026, 0, 29); // 29 - 01 - 2026
-let neetExamDate = new Date(2026, 4, 4); // 04 - 05 - 2026
-let jeeAdvExamDate = new Date(2026, 4, 18); // 18 - 05 - 2025
-
 let customExamName = "Custom Exam";
 let customExamDate = null;
 
