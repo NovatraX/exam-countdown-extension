@@ -15,32 +15,45 @@ function parseDateString(dateStr) {
 }
 
 async function fetchExamDates() {
+    let jeeExamDate, neetExamDate, jeeAdvExamDate;
+
     try {
-        const response = await fetch("https://cdn.jsdelivr.net/gh/NovatraX/exam-countdown-extension@refs/heads/main/assets/exam-dates.json");
+        const response = await fetch("https://cdn.jsdelivr.net/gh/NovatraX/exam-countdown-extension@main/assets/exam-info.json");
         if (!response.ok) {
-            throw new Error(`Failed to fetch exam dates: ${response.status}`);
+            throw new Error(`Failed to fetch exam data: ${response.status}`);
         }
 
-        const data = await response.json();
+        const examData = await response.json();
 
-        if (data.jee) {
-            jeeExamDate = parseDateString(data.jee);
-        }
+        examData.forEach(exam => {
+            const parsedDate = parseDateString(exam.date);
+            switch (exam.name.toLowerCase()) {
+                case "jee main":
+                    jeeExamDate = parsedDate;
+                    break;
+                case "neet":
+                    neetExamDate = parsedDate;
+                    break;
+                case "jee advanced":
+                    jeeAdvExamDate = parsedDate;
+                    break;
+            }
+        });
 
-        if (data.neet) {
-            neetExamDate = parseDateString(data.neet);
-        }
-
-        if (data.jeeadv) {
-            jeeAdvExamDate = parseDateString(data.jeeadv);
-        }
-
-        console.log("Exam Date Updated From Remote Source");
-        return true;
+        console.log("Exam Dates Updated From Remote Source");
     } catch (error) {
-        console.error("Error Fetching Exam Dates", error);
-        return false;
+        console.error("Error Fetching Exam Info", error);
+    
+        jeeExamDate = new Date(2026, 0, 29);       // 29-01-2026
+        neetExamDate = new Date(2026, 4, 4);        // 04-05-2026
+        jeeAdvExamDate = new Date(2025, 4, 18);     // 18-05-2025
     }
+
+    return {
+        jeeExamDate,
+        neetExamDate,
+        jeeAdvExamDate
+    };
 }
 
 async function loadCustomExamData() {
