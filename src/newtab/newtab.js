@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { jeeExamDate, neetExamDate, jeeAdvExamDate, getTimeRemaining, saveCustomExamData, getCustomExamData, hasValidCustomExam } from "../common/countdown-data.js";
+import { fetchExamDates, getTimeRemaining, saveCustomExamData, getCustomExamData, hasValidCustomExam } from "../common/countdown-data.js";
 
 const backgrounds = ["https://www.ghibli.jp/gallery/kimitachi016.jpg", "https://www.ghibli.jp/gallery/redturtle024.jpg", "https://www.ghibli.jp/gallery/marnie022.jpg", "https://www.ghibli.jp/gallery/kazetachinu050.jpg"];
 
@@ -10,6 +10,16 @@ let currentWallpaperUrl = "";
 let backgroundBrightness = 0.4;
 let currentWallpaperIndex = -1;
 let wallpaperRotationPaused = false;
+let jeeExamDate, neetExamDate, jeeAdvExamDate;
+
+(async () => {
+    const examDates = await fetchExamDates();
+    jeeExamDate = examDates.jeeExamDate;
+    neetExamDate = examDates.neetExamDate;
+    jeeAdvExamDate = examDates.jeeAdvExamDate;
+
+    updateCountdown();
+})();
 
 const fallbackMotivationalQuotes = [
     { content: "The best way to predict the future is to create it.", author: "Abraham Lincoln" },

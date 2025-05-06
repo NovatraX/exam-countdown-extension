@@ -124,4 +124,4 @@ fetchExamDates()
     .then(() => loadCustomExamData())
     .catch((error) => console.error("Error during initialization:", error));
 
-export { jeeExamDate, neetExamDate, jeeAdvExamDate, getTimeRemaining, formatTime, saveCustomExamData, getCustomExamData, hasValidCustomExam, fetchExamDates };
+export { getTimeRemaining, formatTime, saveCustomExamData, getCustomExamData, hasValidCustomExam, fetchExamDates };
