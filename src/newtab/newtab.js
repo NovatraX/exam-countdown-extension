@@ -75,6 +75,10 @@ let backgroundBrightness = 0.4;
 let currentWallpaperIndex = -1;
 let wallpaperRotationPaused = false;
 
+// Weather variables
+const WEATHER_API_KEY = "46c79230372920d6e94c39178db24eb6";
+let weatherUpdateInterval = null;
+
 let currentExam = "jeeAdv";
 
 async function setDefaultExam() {
@@ -167,6 +171,68 @@ async function displayRandomQuote() {
 			quoteTextElement.style.opacity = 1;
 			quoteAuthorElement.style.opacity = 1;
 		}, 300);
+	}
+}
+
+// Weather functions
+async function fetchWeatherData() {
+	try {
+		// Get user's geolocation
+		const position = await new Promise((resolve, reject) => {
+			navigator.geolocation.getCurrentPosition(resolve, reject);
+		});
+
+		const { latitude, longitude } = position.coords;
+
+		// Fetch weather from OpenWeatherMap API
+		const response = await fetch(
+			`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
+		);
+
+		if (!response.ok) throw new Error('Weather API request failed');
+
+		const data = await response.json();
+		return {
+			temp: Math.round(data.main.temp),
+			location: data.name,
+			icon: data.weather[0].icon,
+			description: data.weather[0].description
+		};
+	} catch (error) {
+		console.error('Error fetching weather:', error);
+		return null;
+	}
+}
+
+function getWeatherEmoji(iconCode) {
+	const iconMap = {
+		'01d': '☀️', '01n': '🌙',
+		'02d': '⛅', '02n': '☁️',
+		'03d': '☁️', '03n': '☁️',
+		'04d': '☁️', '04n': '☁️',
+		'09d': '🌧️', '09n': '🌧️',
+		'10d': '🌦️', '10n': '🌧️',
+		'11d': '⛈️', '11n': '⛈️',
+		'13d': '❄️', '13n': '❄️',
+		'50d': '🌫️', '50n': '🌫️'
+	};
+	return iconMap[iconCode] || '🌤️';
+}
+
+async function updateWeatherWidget() {
+	const weatherWidget = document.getElementById('weather-widget');
+	const weatherIcon = document.getElementById('weather-icon');
+	const weatherTemp = document.getElementById('weather-temp');
+	const weatherLocation = document.getElementById('weather-location');
+
+	if (!weatherWidget) return;
+
+	const weatherData = await fetchWeatherData();
+
+	if (weatherData) {
+		weatherIcon.textContent = getWeatherEmoji(weatherData.icon);
+		weatherTemp.textContent = `${weatherData.temp}°C`;
+		weatherLocation.textContent = weatherData.location;
 	}
 }
 
@@ -448,6 +514,7 @@ function setupEventListeners() {
 	const toggleCountdown = document.getElementById("toggle-countdown");
 	const toggleQuote = document.getElementById("toggle-quote");
 	const toggleSeconds = document.getElementById("toggle-seconds");
+	const toggleWeather = document.getElementById("toggle-weather");
 	const toggleBrand = document.getElementById("toggle-brand");
 
 	const saveMessage = document.getElementById("save-message");
@@ -657,6 +724,7 @@ function setupEventListeners() {
 			let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
 			let showQuote = toggleQuote ? toggleQuote.checked : true;
 			let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
+			let showWeather = toggleWeather ? toggleWeather.checked : false;
 			let showBrand = toggleBrand ? toggleBrand.checked : true;
 
 			let customName = "";
@@ -695,6 +763,7 @@ function setupEventListeners() {
 					countdown: showCountdown,
 					quote: showQuote,
 					seconds: showSeconds,
+					weather: showWeather,
 					brand: showBrand,
 				},
 				wallpaperIndex: currentWallpaperIndex,
@@ -713,7 +782,7 @@ function setupEventListeners() {
 					backgroundBrightness = brightness;
 					setBackground();
 
-					updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand);
+					updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showWeather, showBrand);
 
 					setTimeout(function () {
 						saveMessage.textContent = "";
@@ -774,11 +843,12 @@ function setActiveExam(exam) {
 	}
 }
 
-function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand) {
+function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showWeather, showBrand) {
 	const dateTimeElement = document.getElementById("clock-class");
 	const countdownElement = document.getElementById("countdown-class");
 	const quoteElement = document.getElementById("quote-class");
 	const secondsElement = document.getElementById("seconds-container");
+	const weatherElement = document.getElementById("weather-widget");
 	const brandElement = document.getElementById("brand-class");
 
 	if (dateTimeElement) {
@@ -795,6 +865,23 @@ function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeco
 
 	if (secondsElement) {
 		secondsElement.style.display = showSeconds ? "" : "none";
+	}
+
+	if (weatherElement) {
+		weatherElement.style.display = showWeather ? "block" : "none";
+		// Update weather when enabled
+		if (showWeather) {
+			updateWeatherWidget();
+			// Set up auto-update every 10 minutes
+			if (weatherUpdateInterval) clearInterval(weatherUpdateInterval);
+			weatherUpdateInterval = setInterval(updateWeatherWidget, 10 * 60 * 1000);
+		} else {
+			// Clear interval when disabled
+			if (weatherUpdateInterval) {
+				clearInterval(weatherUpdateInterval);
+				weatherUpdateInterval = null;
+			}
+		}
 	}
 
 	if (brandElement) {
@@ -833,6 +920,7 @@ function loadUserPreferences() {
 		const toggleCountdown = document.getElementById("toggle-countdown");
 		const toggleQuote = document.getElementById("toggle-quote");
 		const toggleSeconds = document.getElementById("toggle-seconds");
+		const toggleWeather = document.getElementById("toggle-weather");
 		const toggleBrand = document.getElementById("toggle-brand");
 
 		if (data.widgetVisibility) {
@@ -841,10 +929,18 @@ function loadUserPreferences() {
 			if (toggleCountdown) toggleCountdown.checked = data.widgetVisibility.countdown;
 			if (toggleQuote) toggleQuote.checked = data.widgetVisibility.quote;
 			if (toggleSeconds) toggleSeconds.checked = data.widgetVisibility.seconds;
+			if (toggleWeather) toggleWeather.checked = data.widgetVisibility.weather || false;
 			if (toggleBrand) toggleBrand.checked = data.widgetVisibility.brand;
 
 			// Apply visibility settings
-			updateWidgetVisibility(data.widgetVisibility.dateTime, data.widgetVisibility.countdown, data.widgetVisibility.quote, data.widgetVisibility.seconds, data.widgetVisibility.brand);
+			updateWidgetVisibility(
+				data.widgetVisibility.dateTime, 
+				data.widgetVisibility.countdown, 
+				data.widgetVisibility.quote, 
+				data.widgetVisibility.seconds,
+				data.widgetVisibility.weather || false,
+				data.widgetVisibility.brand
+			);
 		}
 
 		console.log(currentExam);

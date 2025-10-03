@@ -17,6 +17,17 @@
 				<div id="clock-class" class="absolute top-0 right-0">
 					<div id="current-time" class="text-2xl font-bold tracking-wide"></div>
 					<div id="current-date" class="text-sm opacity-80"></div>
+					
+					<!-- Weather Widget (below time/date) -->
+					<div id="weather-widget" class="mt-4 hidden">
+						<div class="flex items-center gap-2">
+							<span id="weather-icon" class="text-2xl"></span>
+							<div>
+								<div id="weather-temp" class="text-lg font-bold"></div>
+								<div id="weather-location" class="text-xs opacity-70"></div>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<div class="group fixed top-2 left-2 flex flex-col items-end space-y-2">
@@ -251,6 +262,14 @@
 									<label class="cursor-pointer label justify-start gap-4">
 										<input type="checkbox" id="toggle-seconds" class="toggle toggle-primary" checked />
 										<span class="label-text">Seconds Countdown</span>
+									</label>
+								</div>
+
+								<!-- Weather Toggle -->
+								<div class="form-control">
+									<label class="cursor-pointer label justify-start gap-4">
+										<input type="checkbox" id="toggle-weather" class="toggle toggle-primary" />
+										<span class="label-text">Weather Widget</span>
 									</label>
 								</div>
 
