@@ -1,304 +1,147 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="stylesheet" href="../style.css" />
-		<title>New Tab</title>
-	</head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css">
+  <title>New Tab</title>
+  <style>
+    /* Glassmorphic cards */
+    .bglass {
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      padding: 15px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .bglass:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
 
-	<body class="min-h-screen flex flex-col font-sans">
-		<div class="background bg-base-300"></div>
+    /* Countdown numbers */
+    .countdown {
+      font-family: 'Segoe UI', sans-serif;
+      font-weight: 700;
+      color: #ffffff;
+    }
 
-		<!-- Main Container -->
-		<div class="h-screen flex flex-col py-2 px-2 z-10">
-			<header class="flex justify-between items-start relative">
-				<!-- Date And Time -->
-				<div id="clock-class" class="absolute top-0 right-0">
-					<div id="current-time" class="text-2xl font-bold tracking-wide"></div>
-					<div id="current-date" class="text-sm opacity-80"></div>
-				</div>
+    /* Footer quote */
+    #quote-class {
+      padding: 20px;
+      font-size: 1rem;
+      max-width: 700px;
+    }
 
-				<div class="group fixed top-2 left-2 flex flex-col items-end space-y-2">
-					<!-- Settings Icon -->
-					<div class="tooltip tooltip-right" data-tip="Open Settings Menu">
-						<button id="options-link" class="btn btn-circle bg-base-200 shadow-lg">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"
-								/>
-								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-							</svg>
-						</button>
-					</div>
+    /* Buttons hover effect */
+    .btn-circle:hover {
+      transform: scale(1.1);
+    }
 
-					<!-- Wallpaper Icon -->
-					<div class="tooltip tooltip-right" data-tip="See Source Image">
-						<a id="wallpaper-info-btn" class="btn btn-circle scale-75 transform bg-base-200 opacity-0 shadow-lg transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" target="_blank">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-6 h-6" viewBox="0 0 24 24">
-								<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-							</svg>
-						</a>
-					</div>
+    /* Smooth modal backdrop */
+    dialog::backdrop {
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+    }
 
-					<!-- Theme Icon -->
-					<div class="tooltip tooltip-right" data-tip="Toggle Theme">
-						<button id="theme-toggle" class="btn btn-circle scale-75 transform bg-base-200 opacity-0 shadow-lg transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="size-6" viewBox="0 0 24 24">
-								<path
-									d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
-								></path>
-							</svg>
-						</button>
-					</div>
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+      #countdown-class .grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+      }
+      .countdown {
+        font-size: 4rem;
+      }
+    }
 
-					<!-- Music Icon -->
-					<div class="tooltip tooltip-right" data-tip="Open Music Menu">
-						<button id="music-btn" class="btn btn-circle scale-75 transform bg-base-200 opacity-0 shadow-lg transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="size-6" viewBox="0 0 24 24">
-								<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path>
-							</svg>
-						</button>
-					</div>
+    @media (max-width: 480px) {
+      #countdown-class .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .countdown {
+        font-size: 3rem;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-					<!-- Refetch Icon -->
-					<div class="tooltip tooltip-right" data-tip="Refetch Data">
-						<button id="refetch-data-btn" class="btn btn-circle scale-75 transform bg-base-200 opacity-0 shadow-lg transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
-							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw-icon lucide-refresh-cw">
-								<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-								<path d="M21 3v5h-5" />
-								<path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-								<path d="M8 16H3v5" />
-							</svg>
-						</button>
-					</div>
-				</div>
-			</header>
+  <!-- Background -->
+  <div class="background fixed inset-0 z-0 bg-gradient-to-tr from-indigo-900 via-purple-900 to-pink-900"></div>
 
-			<!-- Countdown -->
-			<main class="flex-1 flex flex-col justify-center items-center">
-				<div id="countdown-class" class="text-center">
-					<div id="exam-badge" class="text-2xl font-semibold mb-4">JEE Main</div>
-					<div class="relative mb-10">
-						<div id="countdown-label" class="exam-label text-white"></div>
-						<div class="grid grid-flow-col gap-5 text-center auto-cols-max">
-							<div class="flex flex-col bglass">
-								<span class="countdown text-7xl py-1">
-									<span id="countdown-months" style="--value: 0" aria-live="polite"></span>
-								</span>
-								Months
-							</div>
-							<div class="flex flex-col bglass">
-								<span class="countdown text-7xl py-1">
-									<span id="countdown-days" style="--value: 0" aria-live="polite"></span>
-								</span>
-								Days
-							</div>
-							<div class="flex flex-col bglass">
-								<span class="countdown text-7xl py-1">
-									<span id="countdown-hours" style="--value: 0" aria-live="polite"></span>
-								</span>
-								Hours
-							</div>
-							<div class="flex flex-col bglass">
-								<span class="countdown text-7xl py-1">
-									<span id="countdown-minutes" style="--value: 0" aria-live="polite"></span>
-								</span>
-								Minutes
-							</div>
-							<div class="flex flex-col bglass">
-								<span class="countdown text-7xl py-1">
-									<span id="countdown-seconds" style="--value: 0" aria-live="polite"></span>
-								</span>
-								Seconds
-							</div>
-						</div>
-					</div>
-				</div>
-			</main>
+  <!-- Main Container -->
+  <div class="flex flex-col h-screen py-4 px-4 relative z-10">
 
-			<!-- Footer -->
-			<footer class="w-full mt-auto relative">
-				<!-- Quote Section -->
-				<div id="quote-class" class="flex flex-row justify-start items-center gap-2">
-					<!-- Quote -->
-					<div class="quote-container max-w-md">
-						<p id="quote-text" class="text-lg text-left italic"></p>
-						<p id="quote-author" class="opacity-70 mt-2 text-right font-medium"></p>
-					</div>
-				</div>
+    <!-- Header -->
+    <header class="flex justify-between items-start mb-10 relative">
+      <div id="clock-class" class="text-right text-white">
+        <div id="current-time" class="text-3xl font-bold tracking-wide"></div>
+        <div id="current-date" class="text-sm opacity-80"></div>
+      </div>
 
-				<!-- Wallpaper Controls -->
-				<div class="absolute left-1/2 bottom-1 transform -translate-x-1/2">
-					<div class="wallpaper-controls flex items-center justify-center bg-base-100 rounded-full shadow-lg">
-						<button id="prev-wallpaper" class="btn btn-ghost btn-circle btn-sm" title="Previous wallpaper">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-5 h-5" viewBox="0 0 24 24">
-								<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-							</svg>
-						</button>
-						<button id="pause-wallpaper" class="btn btn-ghost btn-circle btn-sm" title="Pause/Resume Wallpaper Rotation">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-5 h-5" viewBox="0 0 24 24">
-								<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-							</svg>
-						</button>
-						<button id="next-wallpaper" class="btn btn-ghost btn-circle btn-sm" title="Next Wallpaper">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-5 h-5" viewBox="0 0 24 24">
-								<path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-							</svg>
-						</button>
-					</div>
-				</div>
+      <div class="group flex flex-col items-end space-y-2">
+        <button id="options-link" class="btn btn-circle bg-base-200 shadow-lg" title="Settings">
+          ⚙️
+        </button>
+        <button id="theme-toggle" class="btn btn-circle bg-base-200 shadow-lg mt-1" title="Toggle Theme">
+          🌗
+        </button>
+        <button id="music-btn" class="btn btn-circle bg-base-200 shadow-lg mt-1" title="Music">
+          🎵
+        </button>
+      </div>
+    </header>
 
-				<!-- Branding -->
-				<div id="brand-class" class="absolute right-0 bottom-0">
-					<a id="novatra-link" href="https://novatra.in" target="_blank" rel="noopener" class="font-bold text-2xl">ηovatra</a>
-				</div>
-			</footer>
-		</div>
+    <!-- Countdown Section -->
+    <main class="flex-1 flex flex-col justify-center items-center z-10">
+      <div id="countdown-class" class="text-center text-white">
+        <div id="exam-badge" class="text-3xl font-semibold mb-6">JEE Main</div>
+        <div class="grid grid-flow-col gap-5 text-center auto-cols-max">
+          <div class="flex flex-col bglass">
+            <span class="countdown text-6xl py-1" id="countdown-months" style="--value:0"></span>
+            Months
+          </div>
+          <div class="flex flex-col bglass">
+            <span class="countdown text-6xl py-1" id="countdown-days" style="--value:0"></span>
+            Days
+          </div>
+          <div class="flex flex-col bglass">
+            <span class="countdown text-6xl py-1" id="countdown-hours" style="--value:0"></span>
+            Hours
+          </div>
+          <div class="flex flex-col bglass">
+            <span class="countdown text-6xl py-1" id="countdown-minutes" style="--value:0"></span>
+            Minutes
+          </div>
+          <div class="flex flex-col bglass">
+            <span class="countdown text-6xl py-1" id="countdown-seconds" style="--value:0"></span>
+            Seconds
+          </div>
+        </div>
+      </div>
+    </main>
 
-		<!-- Options Modal -->
-		<dialog id="options-modal" class="modal">
-			<div class="modal-box bg-base-200 shadow-lg border border-base-300">
-				<form method="dialog">
-					<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-				</form>
-				<h3 class="font-bold text-xl mb-6 text-center text-primary">Preferences</h3>
+    <!-- Footer -->
+    <footer class="w-full mt-auto relative z-10 flex flex-col items-center">
+      <div id="quote-class" class="text-center text-white italic opacity-80 max-w-xl">
+        <p id="quote-text"></p>
+        <p id="quote-author" class="mt-2 font-medium"></p>
+      </div>
 
-				<form id="preferences-form">
-					<div class="tabs tabs-lift mb-6">
-						<!-- Countdown Tab -->
-						<input type="radio" name="preferences_tabs" class="tab" aria-label="Countdown" checked="checked" />
-						<div class="tab-content bg-base-100 border-base-300 p-6">
-							<!-- Exam Selection -->
-							<h4 class="font-semibold mb-3">Select Exam:</h4>
-							<div class="form-control mb-6">
-								<select id="exam-selector" class="select select-bordered w-full focus:outline-none">
-									<option value="neet">NEET</option>
-									<option value="jee">JEE Main</option>
-									<option value="jeeAdv">JEE Advanced</option>
-									<option value="custom">Custom Exam</option>
-								</select>
-							</div>
+      <div class="flex mt-4 space-x-3">
+        <button id="prev-wallpaper" class="btn btn-ghost btn-circle" title="Previous">⬅️</button>
+        <button id="pause-wallpaper" class="btn btn-ghost btn-circle" title="Pause/Resume">⏸️</button>
+        <button id="next-wallpaper" class="btn btn-ghost btn-circle" title="Next">➡️</button>
+      </div>
 
-							<!-- Custom Exam Settings -->
-							<div id="custom-exam-section" class="mb-6 hidden">
-								<h4 class="font-semibold mb-3">Custom Exam Settings</h4>
-								<div class="form-control mb-3">
-									<input type="text" id="custom-exam-name" placeholder="Exam Name" class="input input-bordered w-full focus:outline-none" />
-								</div>
-								<div class="form-control mb-3">
-									<div class="relative">
-										<input type="date" id="custom-exam-date" class="input input-bordered w-full focus:outline-none" />
-									</div>
-								</div>
-							</div>
-						</div>
+      <div class="mt-6">
+        <a id="novatra-link" href="https://novatra.in" target="_blank" class="text-2xl font-bold text-white">ηovatra</a>
+      </div>
+    </footer>
+  </div>
 
-						<!-- Wallpaper Tab -->
-						<input type="radio" name="preferences_tabs" class="tab" aria-label="Wallpaper" />
-						<div class="tab-content bg-base-100 border-base-300 p-6">
-							<!-- Custom Wallpaper Input -->
-							<h4 class="font-semibold mb-3">Custom Wallpaper URL</h4>
-							<div class="form-control mb-3">
-								<input type="url" id="custom-wallpaper" placeholder="Paste image link here" class="input input-bordered w-full focus:outline-none" />
-							</div>
-							<div class="text-xs mb-6 opacity-70">Leave empty to use random wallpapers</div>
-
-							<!-- Background Brightness Slider -->
-							<h4 class="font-semibold mb-3">Background Brightness</h4>
-							<div class="form-control mb-2">
-								<input type="range" id="brightness-slider" class="range range-xs w-full" min="0.1" max="0.9" step="0.05" value="0.4" />
-							</div>
-							<div class="flex justify-between text-xs opacity-70 mb-6">
-								<span>Darker</span>
-								<span>Brighter</span>
-							</div>
-						</div>
-
-						<!-- Layout Tab -->
-						<input type="radio" name="preferences_tabs" class="tab" aria-label="Layout" />
-						<div class="tab-content bg-base-100 border-base-300 p-6">
-							<h4 class="font-semibold mb-4">Toggle Widgets</h4>
-							<div class="space-y-4">
-								<!-- Date and Time Toggle -->
-								<div class="form-control">
-									<label class="cursor-pointer label justify-start gap-4">
-										<input type="checkbox" id="toggle-datetime" class="toggle toggle-primary" checked />
-										<span class="label-text">Date And Time</span>
-									</label>
-								</div>
-
-								<!-- Countdown Toggle -->
-								<div class="form-control">
-									<label class="cursor-pointer label justify-start gap-4">
-										<input type="checkbox" id="toggle-countdown" class="toggle toggle-primary" checked />
-										<span class="label-text">Exam Countdown</span>
-									</label>
-								</div>
-
-								<!-- Quote Toggle -->
-								<div class="form-control">
-									<label class="cursor-pointer label justify-start gap-4">
-										<input type="checkbox" id="toggle-quote" class="toggle toggle-primary" checked />
-										<span class="label-text">Motivational Quote</span>
-									</label>
-								</div>
-
-								<!-- Seconds Toggle -->
-								<div class="form-control">
-									<label class="cursor-pointer label justify-start gap-4">
-										<input type="checkbox" id="toggle-seconds" class="toggle toggle-primary" checked />
-										<span class="label-text">Seconds Countdown</span>
-									</label>
-								</div>
-
-								<!-- Brand Link Toggle -->
-								<!-- 
-                <div class="form-control">
-                    <label class="cursor-pointer label justify-start gap-4">
-                        <input type="checkbox" id="toggle-brand" class="toggle toggle-primary" checked />
-                        <span class="label-text">Novatra Link</span>
-                    </label>
-                </div> 
-                -->
-							</div>
-						</div>
-					</div>
-
-					<div class="modal-action">
-						<button type="submit" class="btn btn-primary btn-block">Save Preferences</button>
-					</div>
-					<div id="save-message" class="mt-2 text-success text-center font-medium"></div>
-				</form>
-			</div>
-			<form method="dialog" class="modal-backdrop">
-				<button>close</button>
-			</form>
-		</dialog>
-
-		<!-- Music Player Modal -->
-		<dialog id="music-modal" class="modal">
-			<div class="modal-box bg-base-200 shadow-lg border border-base-300">
-				<form method="dialog">
-					<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-				</form>
-				<h3 class="font-bold text-xl mb-6 text-center text-primary">Music Player</h3>
-
-				<form id="youtube-form" class="mb-4">
-					<div class="form-control mb-3">
-						<input type="text" id="youtube-url" placeholder="Paste YouTube URL here" class="input input-bordered w-full focus:outline-none" />
-					</div>
-					<button type="submit" class="btn btn-primary btn-block">Load Music</button>
-				</form>
-				<div id="youtube-embed" class="w-full aspect-video"></div>
-			</div>
-			<form method="dialog" class="modal-backdrop">
-				<button>close</button>
-			</form>
-		</dialog>
-
-		<script type="module" src="../newtab/newtab.js"></script>
-	</body>
+  <script type="module" src="../newtab/newtab.js"></script>
+</body>
 </html>

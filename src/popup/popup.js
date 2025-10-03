@@ -1,119 +1,77 @@
-import {getTimeRemaining, getCustomExamData, hasValidCustomExam, loadCustomExamData} from "../newtab/newtab.js";
-import browser from "webextension-polyfill";
+// Exam Dates (make sure they are in the future)
+const exams = {
+  custom: null, 
+  jee: new Date("2025-12-15T09:00:00"),
+  jeeAdv: new Date("2025-12-30T09:00:00"),
+  neet: new Date("2026-01-05T09:00:00")
+};
 
-async function updateCountdown() {
-	const storedData = await browser.storage.sync.get("countdowns");
-	const countdowns = storedData.countdowns || {};
+// Calculate remaining time
+function getTimeRemaining(endTime) {
+  const total = Date.parse(endTime) - Date.now();
+  if (total <= 0) return { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
 
-	const jeeExamDate = countdowns.jee?.date ? new Date(countdowns.jee.date) : new Date(2026, 0, 29);
-	const neetExamDate = countdowns.neet?.date ? new Date(countdowns.neet.date) : new Date(2026, 4, 4);
-	const jeeAdvExamDate = countdowns.jeeAdv?.date ? new Date(countdowns.jeeAdv.date) : new Date(2027, 4, 18);
+  const days = Math.floor(total / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((total / (1000 * 60)) % 60);
+  const seconds = Math.floor((total / 1000) % 60);
 
-	await loadCustomExamData();
-
-	// JEE Main countdown
-	const jeeTime = getTimeRemaining(jeeExamDate);
-	if (jeeTime.total <= 0) {
-		document.getElementById("jee-timer").innerHTML = "<p class='font-medium text-success'>Exam day has arrived!</p>";
-	} else {
-		document.getElementById("jee-months").style = `--value:${jeeTime.month}`;
-		document.getElementById("jee-days").style = `--value:${jeeTime.days}`;
-		document.getElementById("jee-hours").style = `--value:${jeeTime.hours}`;
-		document.getElementById("jee-minutes").style = `--value:${jeeTime.minutes}`;
-		document.getElementById("jee-seconds").style = `--value:${jeeTime.seconds}`;
-	}
-
-	// JEE Advanced countdown
-	const jeeAdvTime = getTimeRemaining(jeeAdvExamDate);
-	if (jeeAdvTime.total <= 0) {
-		document.getElementById("jee-adv-timer").innerHTML = "<p class='font-medium text-success'>Exam day has arrived!</p>";
-	} else {
-		document.getElementById("jee-adv-months").style = `--value:${jeeAdvTime.month}`;
-		document.getElementById("jee-adv-days").style = `--value:${jeeAdvTime.days}`;
-		document.getElementById("jee-adv-hours").style = `--value:${jeeAdvTime.hours}`;
-		document.getElementById("jee-adv-minutes").style = `--value:${jeeAdvTime.minutes}`;
-		document.getElementById("jee-adv-seconds").style = `--value:${jeeAdvTime.seconds}`;
-	}
-
-	// NEET countdown
-	const neetTime = getTimeRemaining(neetExamDate);
-	if (neetTime.total <= 0) {
-		document.getElementById("neet-timer").innerHTML = "<p class='font-medium text-success'>Exam day has arrived!</p>";
-	} else {
-		document.getElementById("neet-months").style = `--value:${neetTime.month}`;
-		document.getElementById("neet-days").style = `--value:${neetTime.days}`;
-		document.getElementById("neet-hours").style = `--value:${neetTime.hours}`;
-		document.getElementById("neet-minutes").style = `--value:${neetTime.minutes}`;
-		document.getElementById("neet-seconds").style = `--value:${neetTime.seconds}`;
-	}
-
-	// Custom exam countdown
-	if (hasValidCustomExam()) {
-		const customExamSection = document.getElementById("custom-exam-section");
-
-		if (customExamSection) {
-			customExamSection.classList.remove("hidden");
-		}
-
-		const customExam = getCustomExamData();
-
-		const customExamBadge = document.getElementById("custom-exam-badge");
-		if (customExamBadge) {
-			customExamBadge.textContent = customExam.name;
-		}
-
-		const customExamTime = getTimeRemaining(customExam.date);
-		if (customExamTime.total <= 0) {
-			document.getElementById("custom-exam-timer").innerHTML = "<p class='font-medium text-success'>Exam day has arrived!</p>";
-		} else {
-			document.getElementById("custom-exam-months").style = `--value:${customExamTime.month}`;
-			document.getElementById("custom-exam-days").style = `--value:${customExamTime.days}`;
-			document.getElementById("custom-exam-hours").style = `--value:${customExamTime.hours}`;
-			document.getElementById("custom-exam-minutes").style = `--value:${customExamTime.minutes}`;
-			document.getElementById("custom-exam-seconds").style = `--value:${customExamTime.seconds}`;
-		}
-	} else {
-		const customExamSection = document.getElementById("custom-exam-section");
-
-		if (customExamSection) {
-			customExamSection.classList.add("hidden");
-		}
-	}
+  return { total, days, hours, minutes, seconds };
 }
 
+// Update all countdowns
+function updateCountdown() {
+  for (const exam in exams) {
+    const endTime = exams[exam];
+    if (!endTime) continue;
+
+    const t = getTimeRemaining(endTime);
+
+    // Show exam day message if passed
+    if (t.total <= 0) {
+      const sectionId = exam === "custom" ? "custom-exam-section" : `${exam}-timer`;
+      const section = document.getElementById(sectionId);
+      if (section) section.innerHTML = "<p class='font-medium text-green-400'>Exam day has arrived!</p>";
+      continue;
+    }
+
+    if (exam === "custom") document.getElementById("custom-exam-section").classList.remove("hidden");
+
+    const ids = exam === "custom"
+      ? ["custom-exam-days","custom-exam-hours","custom-exam-minutes","custom-exam-seconds"]
+      : [`${exam}-days`,`${exam}-hours`,`${exam}-minutes`,`${exam}-seconds`];
+
+    const values = [t.days, t.hours, t.minutes, t.seconds];
+
+    ids.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = values[i];
+    });
+  }
+}
+
+// Theme
 function loadThemePreference() {
-	browser.storage.sync.get(["theme"]).then((data) => {
-		if (data.theme) {
-			document.documentElement.dataset.theme = data.theme;
-		}
-	});
+  const theme = localStorage.getItem("theme") || "dark";
+  if(theme === "dark") document.documentElement.classList.add("dark");
+  else document.documentElement.classList.remove("dark");
 }
 
 function toggleTheme() {
-	const currentTheme = document.documentElement.dataset.theme;
-	const newTheme = currentTheme === "dark" ? "light" : "dark";
-
-	document.documentElement.dataset.theme = newTheme;
-
-	if (browser.storage) {
-		browser.storage.sync.set({theme: newTheme}).catch(function (error) {
-			console.error("Error saving theme preference:", error);
-		});
-	}
+  if(document.documentElement.classList.contains("dark")){
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme","light");
+  } else {
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("theme","dark");
+  }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-	updateCountdown();
-	loadThemePreference();
-	setInterval(updateCountdown, 1000);
+// Init
+document.addEventListener("DOMContentLoaded", () => {
+  loadThemePreference();
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 
-	const themeToggle = document.getElementById("theme-toggle");
-	if (themeToggle) {
-		themeToggle.addEventListener("click", toggleTheme);
-	}
-
-	const openCountdownBtn = document.getElementById("openCountdownBtn");
-	if (openCountdownBtn) {
-		openCountdownBtn.addEventListener("click", openFullCountdown);
-	}
+  document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
 });
