@@ -177,13 +177,6 @@ async function displayRandomQuote() {
 
 // Weather Functions
 async function fetchWeather() {
-	const apiKey = "46c79230372920d6e94c39178db24eb6";
-	
-	if (!apiKey) {
-		console.error("Weather API key not found");
-		return null;
-	}
-
 	try {
 		// Get user's location using browser's geolocation API
 		const position = await new Promise((resolve, reject) => {
@@ -195,30 +188,68 @@ async function fetchWeather() {
 
 		const { latitude, longitude } = position.coords;
 		
-		// Fetch weather data
-		const response = await fetch(
-			`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
+		// Fetch weather data from Open-Meteo (free, no API key required)
+		const weatherResponse = await fetch(
+			`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
 		);
 
-		if (!response.ok) {
-			throw new Error(`Weather API error: ${response.status}`);
+		if (!weatherResponse.ok) {
+			throw new Error(`Weather API error: ${weatherResponse.status}`);
 		}
 
-		const data = await response.json();
-		return data;
+		const weatherData = await weatherResponse.json();
+		
+		// Fetch location name using BigDataCloud reverse geocoding (free, CORS-friendly)
+		let cityName = 'My Location';
+		try {
+			const geocodeResponse = await fetch(
+				`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+			);
+			
+			if (geocodeResponse.ok) {
+				const geocodeData = await geocodeResponse.json();
+				cityName = geocodeData.city || geocodeData.locality || geocodeData.principalSubdivision || 'My Location';
+			}
+		} catch (geocodeError) {
+			console.warn("Geocoding failed, using default location name:", geocodeError);
+			// Continue with default "My Location" name
+		}
+
+		// Transform Open-Meteo data to match our display format
+		return {
+			name: cityName,
+			main: {
+				temp: weatherData.current.temperature_2m
+			},
+			weather: [{
+				description: getWeatherDescription(weatherData.current.weather_code),
+				icon: getWeatherIcon(weatherData.current.weather_code)
+			}],
+			coords: { latitude, longitude }
+		};
 	} catch (error) {
 		console.error("Error fetching weather:", error);
 		
 		// Try to get weather from stored location if geolocation fails
 		if (browser && browser.storage) {
 			try {
-				const { lastWeatherCity } = await browser.storage.sync.get(['lastWeatherCity']);
-				if (lastWeatherCity) {
-					const response = await fetch(
-						`https://api.openweathermap.org/data/2.5/weather?q=${lastWeatherCity}&units=metric&appid=${apiKey}`
+				const { lastWeatherCoords, lastWeatherCity } = await browser.storage.sync.get(['lastWeatherCoords', 'lastWeatherCity']);
+				if (lastWeatherCoords) {
+					const { latitude, longitude } = lastWeatherCoords;
+					const weatherResponse = await fetch(
+						`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
 					);
-					if (response.ok) {
-						return await response.json();
+					if (weatherResponse.ok) {
+						const weatherData = await weatherResponse.json();
+						return {
+							name: lastWeatherCity || 'My Location',
+							main: { temp: weatherData.current.temperature_2m },
+							weather: [{
+								description: getWeatherDescription(weatherData.current.weather_code),
+								icon: getWeatherIcon(weatherData.current.weather_code)
+							}],
+							coords: { latitude, longitude }
+						};
 					}
 				}
 			} catch (e) {
@@ -228,6 +259,68 @@ async function fetchWeather() {
 		
 		return null;
 	}
+}
+
+// Convert WMO weather codes to descriptions
+function getWeatherDescription(code) {
+	const weatherCodes = {
+		0: 'clear sky',
+		1: 'mainly clear',
+		2: 'partly cloudy',
+		3: 'overcast',
+		45: 'foggy',
+		48: 'depositing rime fog',
+		51: 'light drizzle',
+		53: 'moderate drizzle',
+		55: 'dense drizzle',
+		61: 'slight rain',
+		63: 'moderate rain',
+		65: 'heavy rain',
+		71: 'slight snow',
+		73: 'moderate snow',
+		75: 'heavy snow',
+		77: 'snow grains',
+		80: 'slight rain showers',
+		81: 'moderate rain showers',
+		82: 'violent rain showers',
+		85: 'slight snow showers',
+		86: 'heavy snow showers',
+		95: 'thunderstorm',
+		96: 'thunderstorm with slight hail',
+		99: 'thunderstorm with heavy hail'
+	};
+	return weatherCodes[code] || 'unknown';
+}
+
+// Convert WMO weather codes to icon codes (similar to OpenWeatherMap format)
+function getWeatherIcon(code) {
+	const iconMap = {
+		0: '01d', // clear sky
+		1: '02d', // mainly clear
+		2: '03d', // partly cloudy
+		3: '04d', // overcast
+		45: '50d', // fog
+		48: '50d', // fog
+		51: '09d', // drizzle
+		53: '09d', // drizzle
+		55: '09d', // drizzle
+		61: '10d', // rain
+		63: '10d', // rain
+		65: '10d', // rain
+		71: '13d', // snow
+		73: '13d', // snow
+		75: '13d', // snow
+		77: '13d', // snow
+		80: '09d', // showers
+		81: '09d', // showers
+		82: '09d', // showers
+		85: '13d', // snow showers
+		86: '13d', // snow showers
+		95: '11d', // thunderstorm
+		96: '11d', // thunderstorm
+		99: '11d'  // thunderstorm
+	};
+	return iconMap[code] || '01d';
 }
 
 function displayWeather(weatherData) {
@@ -250,7 +343,7 @@ function displayWeather(weatherData) {
 	tempElement.textContent = `${Math.round(weatherData.main.temp)}°C`;
 	descElement.textContent = weatherData.weather[0].description;
 
-	// Set weather icon
+	// Set weather icon (using OpenWeatherMap icon format for compatibility)
 	const iconCode = weatherData.weather[0].icon;
 	const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 	iconElement.src = iconUrl;
@@ -258,9 +351,15 @@ function displayWeather(weatherData) {
 
 	weatherWidget.style.display = "block";
 
-	// Store city name for fallback
-	if (browser && browser.storage) {
-		browser.storage.sync.set({ lastWeatherCity: weatherData.name });
+	// Store coordinates and city name for fallback
+	if (browser && browser.storage && weatherData.coords) {
+		browser.storage.sync.set({ 
+			lastWeatherCoords: {
+				latitude: weatherData.coords.latitude,
+				longitude: weatherData.coords.longitude
+			},
+			lastWeatherCity: weatherData.name
+		});
 	}
 }
 
