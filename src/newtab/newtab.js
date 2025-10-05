@@ -178,7 +178,9 @@ async function displayRandomQuote() {
 // Weather Functions
 async function fetchWeather() {
 	try {
-		// Get user's location using browser's geolocation API
+		// JUSTIFICATION: Geolocation is necessary to fetch accurate weather data for the user's current location.
+		// This feature is opt-in (disabled by default) and requires explicit user permission.
+		// The geolocation permission is declared in manifest.json and user consent is obtained at runtime.
 		const position = await new Promise((resolve, reject) => {
 			navigator.geolocation.getCurrentPosition(resolve, reject, {
 				timeout: 10000,
