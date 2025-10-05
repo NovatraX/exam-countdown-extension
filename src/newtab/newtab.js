@@ -227,10 +227,22 @@ async function fetchWeather() {
 				description: getWeatherDescription(weatherData.current.weather_code),
 				icon: getWeatherIcon(weatherData.current.weather_code)
 			}],
-			coords: { latitude, longitude }
-		};
+		coords: { latitude, longitude }
+	};
 	} catch (error) {
-		console.error("Error fetching weather:", error);
+		// Provide user-friendly error messages based on error type
+		if (error.code === 1) {
+			// User denied permission
+			console.warn("Weather: Location permission denied by user. Weather widget will remain hidden.");
+		} else if (error.code === 2) {
+			// Position unavailable
+			console.warn("Weather: Location unavailable. Trying fallback location.");
+		} else if (error.code === 3) {
+			// Timeout
+			console.warn("Weather: Location request timed out. Trying fallback location.");
+		} else {
+			console.error("Weather: Error fetching weather data:", error);
+		}
 		
 		// Try to get weather from stored location if geolocation fails
 		if (browser && browser.storage) {
@@ -261,9 +273,7 @@ async function fetchWeather() {
 		
 		return null;
 	}
-}
-
-// Convert WMO weather codes to descriptions
+}// Convert WMO weather codes to descriptions
 function getWeatherDescription(code) {
 	const weatherCodes = {
 		0: 'clear sky',
