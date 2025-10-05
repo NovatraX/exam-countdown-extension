@@ -1157,6 +1157,15 @@ function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeco
 }
 
 function loadUserPreferences() {
+	// Get references to toggle elements for this function's scope
+	const toggleDateTime = document.getElementById("toggle-datetime");
+	const toggleCountdown = document.getElementById("toggle-countdown");
+	const toggleQuote = document.getElementById("toggle-quote");
+	const toggleSeconds = document.getElementById("toggle-seconds");
+	const toggleTodos = document.getElementById("toggle-todos");
+	const toggleBrand = document.getElementById("toggle-brand");
+	const toggleWeather = document.getElementById("toggle-weather");
+	
 	browser.storage.sync.get().then((data) => {
 		if (data.theme) {
 			document.documentElement.dataset.theme = data.theme;
