@@ -151,7 +151,7 @@ async function displayRandomQuote() {
 	quoteAuthorElement.style.opacity = 0;
 
 	try {
-		const response = await fetch("http://api.quotable.io/quotes/random?tags=inspirational|motivational|productivity|education|wisdom|success|work");
+		const response = await fetch("https://api.quotable.io/quotes/random?tags=inspirational|motivational|productivity|education|wisdom|success|work");
 		const data = await response.json();
 
 		const quote = {
@@ -177,49 +177,111 @@ async function displayRandomQuote() {
 
 // Weather Functions
 async function fetchWeather() {
+	// JUSTIFICATION: Geolocation is necessary to fetch accurate weather data for the user's current location.
+	// This feature is opt-in (disabled by default) and requires explicit user permission.
+	// The geolocation permission is declared in manifest.json and user consent is obtained at runtime.
+	
 	try {
-		// JUSTIFICATION: Geolocation is necessary to fetch accurate weather data for the user's current location.
-		// This feature is opt-in (disabled by default) and requires explicit user permission.
-		// The geolocation permission is declared in manifest.json and user consent is obtained at runtime.
-		const position = await new Promise((resolve, reject) => {
-			navigator.geolocation.getCurrentPosition(resolve, reject, {
-				timeout: 10000,
-				enableHighAccuracy: false
-			});
-		});
-
-		const { latitude, longitude } = position.coords;
+		let latitude, longitude, cityName;
+		let locationFound = false;
+		
+	// Check storage for user preferences
+	if (browser && browser.storage) {
+		const { useAutoLocation, useCustomLocation, customWeatherLocation } = await browser.storage.sync.get([
+			'useAutoLocation', 
+			'useCustomLocation', 
+			'customWeatherLocation'
+		]);
+		
+		console.log("Weather fetch - useAutoLocation:", useAutoLocation);
+		console.log("Weather fetch - useCustomLocation:", useCustomLocation);
+		console.log("Weather fetch - customWeatherLocation:", customWeatherLocation);
+		
+		// Priority 1: Custom location (if enabled)
+		if (useCustomLocation && customWeatherLocation && customWeatherLocation.city) {
+			console.log("Using custom location (user preference):", customWeatherLocation.city);
+			cityName = customWeatherLocation.city;
+			
+			// Geocode the city name
+			try {
+				const geoResp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(customWeatherLocation.city)}&count=1`);
+				if (geoResp.ok) {
+					const geoData = await geoResp.json();
+					console.log("Geocoding API response:", geoData);
+					if (geoData.results && geoData.results[0]) {
+						latitude = geoData.results[0].latitude;
+						longitude = geoData.results[0].longitude;
+						console.log("Geocoded custom location to:", latitude, longitude);
+						locationFound = true;
+					} else {
+						console.warn("No geocoding results found for:", customWeatherLocation.city);
+					}
+				}
+			} catch (e) {
+				console.error("City geocoding failed:", e);
+			}
+		} 
+		// Priority 2: Auto-detect location (if enabled and custom not used)
+		else if (useAutoLocation) {
+			console.log("Using auto-detect location (geolocation)");
+			try {
+				const position = await new Promise((resolve, reject) => {
+					navigator.geolocation.getCurrentPosition(resolve, reject, {
+						timeout: 10000,
+						enableHighAccuracy: false
+					});
+				});
+				
+				latitude = position.coords.latitude;
+				longitude = position.coords.longitude;
+				console.log("Got coordinates from geolocation:", latitude, longitude);
+				
+				// Fetch city name using BigDataCloud
+				cityName = 'My Location';
+				try {
+					const geocodeResponse = await fetch(
+						`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+					);
+					if (geocodeResponse.ok) {
+						const geocodeData = await geocodeResponse.json();
+						cityName = geocodeData.city || geocodeData.locality || geocodeData.principalSubdivision || 'My Location';
+					}
+				} catch (geocodeError) {
+					console.warn("Reverse geocoding failed:", geocodeError);
+				}
+				locationFound = true;
+			} catch (geoError) {
+				console.error("Geolocation failed:", geoError);
+			}
+		} else {
+			console.log("Neither auto-detect nor custom location is enabled");
+		}
+	}
+	
+	// If no location found, return null
+	if (!locationFound) {
+		console.log("No location available - user must enable auto-detect or custom location");
+		return null;
+	}
+		
+		if (latitude == null || longitude == null) {
+			console.warn("No valid coordinates available for weather");
+			return null;
+		}
 		
 		// Fetch weather data from Open-Meteo (free, no API key required)
 		const weatherResponse = await fetch(
 			`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
 		);
-
+		
 		if (!weatherResponse.ok) {
 			throw new Error(`Weather API error: ${weatherResponse.status}`);
 		}
-
+		
 		const weatherData = await weatherResponse.json();
 		
-		// Fetch location name using BigDataCloud reverse geocoding (free, CORS-friendly)
-		let cityName = 'My Location';
-		try {
-			const geocodeResponse = await fetch(
-				`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-			);
-			
-			if (geocodeResponse.ok) {
-				const geocodeData = await geocodeResponse.json();
-				cityName = geocodeData.city || geocodeData.locality || geocodeData.principalSubdivision || 'My Location';
-			}
-		} catch (geocodeError) {
-			console.warn("Geocoding failed, using default location name:", geocodeError);
-			// Continue with default "My Location" name
-		}
-
-		// Transform Open-Meteo data to match our display format
 		return {
-			name: cityName,
+			name: cityName || 'My Location',
 			main: {
 				temp: weatherData.current.temperature_2m
 			},
@@ -227,50 +289,10 @@ async function fetchWeather() {
 				description: getWeatherDescription(weatherData.current.weather_code),
 				icon: getWeatherIcon(weatherData.current.weather_code)
 			}],
-		coords: { latitude, longitude }
-	};
+			coords: { latitude, longitude }
+		};
 	} catch (error) {
-		// Provide user-friendly error messages based on error type
-		if (error.code === 1) {
-			// User denied permission
-			console.warn("Weather: Location permission denied by user. Weather widget will remain hidden.");
-		} else if (error.code === 2) {
-			// Position unavailable
-			console.warn("Weather: Location unavailable. Trying fallback location.");
-		} else if (error.code === 3) {
-			// Timeout
-			console.warn("Weather: Location request timed out. Trying fallback location.");
-		} else {
-			console.error("Weather: Error fetching weather data:", error);
-		}
-		
-		// Try to get weather from stored location if geolocation fails
-		if (browser && browser.storage) {
-			try {
-				const { lastWeatherCoords, lastWeatherCity } = await browser.storage.sync.get(['lastWeatherCoords', 'lastWeatherCity']);
-				if (lastWeatherCoords) {
-					const { latitude, longitude } = lastWeatherCoords;
-					const weatherResponse = await fetch(
-						`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
-					);
-					if (weatherResponse.ok) {
-						const weatherData = await weatherResponse.json();
-						return {
-							name: lastWeatherCity || 'My Location',
-							main: { temp: weatherData.current.temperature_2m },
-							weather: [{
-								description: getWeatherDescription(weatherData.current.weather_code),
-								icon: getWeatherIcon(weatherData.current.weather_code)
-							}],
-							coords: { latitude, longitude }
-						};
-					}
-				}
-			} catch (e) {
-				console.error("Fallback weather fetch failed:", e);
-			}
-		}
-		
+		console.error("Weather: Error fetching weather data:", error);
 		return null;
 	}
 }// Convert WMO weather codes to descriptions
@@ -362,17 +384,6 @@ function displayWeather(weatherData) {
 	iconElement.style.display = "block";
 
 	weatherWidget.style.display = "block";
-
-	// Store coordinates and city name for fallback
-	if (browser && browser.storage && weatherData.coords) {
-		browser.storage.sync.set({ 
-			lastWeatherCoords: {
-				latitude: weatherData.coords.latitude,
-				longitude: weatherData.coords.longitude
-			},
-			lastWeatherCity: weatherData.name
-		});
-	}
 }
 
 async function updateWeather() {
@@ -663,7 +674,11 @@ function setupEventListeners() {
 	const toggleWeather = document.getElementById("toggle-weather");
 
 	const saveMessage = document.getElementById("save-message");
-
+	// Weather location fields
+	const useAutoLocationToggle = document.getElementById("use-auto-location");
+	const customWeatherCityInput = document.getElementById("custom-weather-city");
+	const useCustomLocationToggle = document.getElementById("use-custom-location");
+	
 	const nextWallpaperBtn = document.getElementById("next-wallpaper");
 	const prevWallpaperBtn = document.getElementById("prev-wallpaper");
 	const pauseWallpaperBtn = document.getElementById("pause-wallpaper");
@@ -708,16 +723,36 @@ function setupEventListeners() {
 				customWallpaperInput.value = "";
 			}
 
-			if (data.backgroundBrightness !== undefined) {
-				brightnessSlider.value = data.backgroundBrightness;
-			} else {
-				brightnessSlider.value = 0.4;
+		if (data.backgroundBrightness !== undefined) {
+			brightnessSlider.value = data.backgroundBrightness;
+		} else {
+			brightnessSlider.value = 0.4;
+		}
+		
+		// Load custom weather location if it exists
+		if (data.customWeatherLocation) {
+			console.log("Loading custom weather location:", data.customWeatherLocation);
+			if (customWeatherCityInput) {
+				customWeatherCityInput.value = data.customWeatherLocation.city || "";
 			}
-			const customExam = getCustomExamData();
-			const minTime = getCurrentLocalDatetimeString();
-			customExamDateInput.min = minTime;
-
-			if (customExam.name) {
+		} else {
+			console.log("No custom weather location saved");
+			if (customWeatherCityInput) customWeatherCityInput.value = "";
+		}
+		
+		// Load auto-location toggle
+		if (useAutoLocationToggle) {
+			useAutoLocationToggle.checked = data.useAutoLocation || false;
+		}
+		
+		// Load custom location toggle
+		if (useCustomLocationToggle) {
+			useCustomLocationToggle.checked = data.useCustomLocation || false;
+		}
+		
+		const customExam = getCustomExamData();
+		const minTime = getCurrentLocalDatetimeString();
+		customExamDateInput.min = minTime;			if (customExam.name) {
 				customExamNameInput.value = customExam.name;
 			} else {
 				customExamNameInput.value = "";
@@ -894,97 +929,140 @@ function setupEventListeners() {
 		}
 	}
 	if (preferencesForm) {
-		preferencesForm.addEventListener("submit", function (event) {
-			event.preventDefault();
+		   preferencesForm.addEventListener("submit", function (event) {
+			   event.preventDefault();
+   
+   console.log("DEBUG - Form submitted! Elements:", {
+   customWeatherCityInput: customWeatherCityInput,
+   useCustomLocationToggle: useCustomLocationToggle,
+   cityValue: customWeatherCityInput?.value,
+   toggleValue: useCustomLocationToggle?.checked
+   });
 
-			let activeExam = examSelector.value;
-			let wallpaperUrl = customWallpaperInput.value.trim();
-			let brightness = parseFloat(brightnessSlider.value);
+			   let activeExam = examSelector.value;
+			   let wallpaperUrl = customWallpaperInput.value.trim();
+			   let brightness = parseFloat(brightnessSlider.value);
 
-			let showDateTime = toggleDateTime ? toggleDateTime.checked : true;
-			let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
-			let showQuote = toggleQuote ? toggleQuote.checked : true;
-			let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
-			let showBrand = toggleBrand ? toggleBrand.checked : true;
-			let showWeather = toggleWeather ? toggleWeather.checked : false;
+			   let showDateTime = toggleDateTime ? toggleDateTime.checked : true;
+			   let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
+			   let showQuote = toggleQuote ? toggleQuote.checked : true;
+			   let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
+			   let showBrand = toggleBrand ? toggleBrand.checked : true;
+			   let showWeather = toggleWeather ? toggleWeather.checked : false;
 
-			let customName = "";
-			let customDate = null;
+			   let customName = "";
+			   let customDate = null;
 
-			if (activeExam === "custom") {
-				customName = customExamNameInput.value.trim();
+		   // Weather location settings
+		   let customWeatherCity = customWeatherCityInput ? customWeatherCityInput.value.trim() : "";
+		   let useAutoLocation = useAutoLocationToggle ? useAutoLocationToggle.checked : false;
+		   let useCustomLocation = useCustomLocationToggle ? useCustomLocationToggle.checked : false;
 
-				if (!customName) {
-					customName = "Custom Exam";
-				}
+		   // Auto-enable weather widget if either location method is enabled
+		   if ((useAutoLocation || (useCustomLocation && customWeatherCity)) && !showWeather) {
+			   showWeather = true;
+			   if (toggleWeather) {
+				   toggleWeather.checked = true;
+			   }
+			   console.log("Auto-enabled weather widget because location is set");
+		   }
 
-				if (customExamDateInput.value) {
-					customDate = new Date(customExamDateInput.value);
-				}
+		   // Auto-disable weather widget if both location methods are turned off
+		   if (!useAutoLocation && !useCustomLocation && showWeather) {
+			   showWeather = false;
+			   if (toggleWeather) {
+				   toggleWeather.checked = false;
+			   }
+			   console.log("Auto-disabled weather widget because no location method is enabled");
+		   }
 
-				if (!customDate || isNaN(customDate.getTime())) {
-					saveMessage.textContent = "Please enter a valid date for your custom exam";
-					saveMessage.style.color = "red";
-					setTimeout(function () {
-						saveMessage.textContent = "";
-						saveMessage.style.color = "";
-					}, 3000);
-					return;
-				}
-			}
-			if (activeExam === "custom" && customDate) {
-				saveCustomExamData(customName, customDate);
-			}
-			const dataToSave = {
-				activeExam: activeExam,
-				customWallpaper: wallpaperUrl,
-				backgroundBrightness: brightness,
-				widgetVisibility: {
-					dateTime: showDateTime,
-					countdown: showCountdown,
-					quote: showQuote,
-					seconds: showSeconds,
-					brand: showBrand,
-					weather: showWeather,
-				},
-				wallpaperIndex: currentWallpaperIndex,
-				wallpaperRotationPaused: wallpaperRotationPaused,
-			};
+		   console.log("Saving weather location settings:", {
+			   useAutoLocation: useAutoLocation,
+			   useCustomLocation: useCustomLocation,
+			   customCity: customWeatherCity,
+			   weatherWidgetEnabled: showWeather
+		   });			   if (activeExam === "custom") {
+				   customName = customExamNameInput.value.trim();
 
-			browser.storage.sync
-				.set(dataToSave)
-				.then(() => {
-					saveMessage.textContent = "Preferences Saved!";
-					saveMessage.style.color = "";
+				   if (!customName) {
+					   customName = "Custom Exam";
+				   }
 
-					setActiveExam(activeExam);
+				   if (customExamDateInput.value) {
+					   customDate = new Date(customExamDateInput.value);
+				   }
 
-					customWallpaper = wallpaperUrl;
-					backgroundBrightness = brightness;
-					setBackground();
+				   if (!customDate || isNaN(customDate.getTime())) {
+					   saveMessage.textContent = "Please enter a valid date for your custom exam";
+					   saveMessage.style.color = "red";
+					   setTimeout(function () {
+						   saveMessage.textContent = "";
+						   saveMessage.style.color = "";
+					   }, 3000);
+					   return;
+				   }
+			   }
+			   if (activeExam === "custom" && customDate) {
+				   saveCustomExamData(customName, customDate);
+			   }
+			   const dataToSave = {
+				   activeExam: activeExam,
+				   customWallpaper: wallpaperUrl,
+				   backgroundBrightness: brightness,
+				   widgetVisibility: {
+					   dateTime: showDateTime,
+					   countdown: showCountdown,
+					   quote: showQuote,
+					   seconds: showSeconds,
+					   brand: showBrand,
+					   weather: showWeather,
+				   },
+			   wallpaperIndex: currentWallpaperIndex,
+			   wallpaperRotationPaused: wallpaperRotationPaused,
+			   useAutoLocation: useAutoLocation,
+			   customWeatherLocation: {
+				   city: customWeatherCity,
+			   },
+			   useCustomLocation: useCustomLocation
+		   };
+		   
+		   console.log("Data being saved to storage:", dataToSave);
+		   
+		   browser.storage.sync
+				   .set(dataToSave)
+				   .then(() => {
+					   saveMessage.textContent = "Preferences Saved!";
+					   saveMessage.style.color = "";
 
-					updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand, showWeather);
-					
-					// Update weather if it's enabled
-					if (showWeather) {
-						updateWeather();
-					}
+					   setActiveExam(activeExam);
 
-					setTimeout(function () {
-						saveMessage.textContent = "";
-					}, 3000);
-					optionsModal.close();
-				})
-				.catch((error) => {
-					console.error("Failed to save preferences:", error);
-					saveMessage.textContent = "Failed to save preferences";
-					saveMessage.style.color = "red";
+					   customWallpaper = wallpaperUrl;
+					   backgroundBrightness = brightness;
+					   setBackground();
 
-					setTimeout(function () {
-						saveMessage.textContent = "";
-					}, 3000);
-				});
-		});
+					   updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand, showWeather);
+                   
+				   // Update weather if it's enabled
+				   if (showWeather) {
+					   console.log("Weather is enabled, calling updateWeather()");
+					   updateWeather();
+				   } else {
+					   console.log("Weather widget is disabled, skipping update");
+				   }					   setTimeout(function () {
+						   saveMessage.textContent = "";
+					   }, 3000);
+					   optionsModal.close();
+				   })
+				   .catch((error) => {
+					   console.error("Failed to save preferences:", error);
+					   saveMessage.textContent = "Failed to save preferences";
+					   saveMessage.style.color = "red";
+
+					   setTimeout(function () {
+						   saveMessage.textContent = "";
+					   }, 3000);
+				   });
+		   });
 	}
 
 	if (brightnessSlider) {
@@ -1059,6 +1137,7 @@ function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeco
 
 	if (weatherElement) {
 		weatherElement.style.display = showWeather ? "" : "none";
+		console.log("Weather widget visibility updated:", showWeather ? "visible" : "hidden");
 	}
 }
 
@@ -1112,16 +1191,17 @@ function loadUserPreferences() {
 				data.widgetVisibility.quote, 
 				data.widgetVisibility.seconds, 
 				data.widgetVisibility.brand,
-				data.widgetVisibility.weather === true
-			);
+			data.widgetVisibility.weather === true
+		);
 
-			// Update weather if enabled
-			if (data.widgetVisibility.weather === true) {
-				updateWeather();
-			}
+		// Update weather if enabled
+		if (data.widgetVisibility.weather === true) {
+			console.log("Weather widget is enabled on page load, fetching weather...");
+			updateWeather();
+		} else {
+			console.log("Weather widget is disabled on page load, weather status:", data.widgetVisibility?.weather);
 		}
-
-		console.log(currentExam);
+	}		console.log(currentExam);
 
 		updateNovatraLink(currentExam);
 		setBackground();
@@ -1201,3 +1281,13 @@ function updatePauseButtonIcon() {
 }
 
 export { getTimeRemaining, getCustomExamData, hasValidCustomExam, loadCustomExamData };
+
+
+
+
+
+
+
+
+
+

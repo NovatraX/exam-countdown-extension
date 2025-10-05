@@ -275,12 +275,61 @@
 										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 inline mr-1">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
 										</svg>
-										<strong>Privacy:</strong> Weather requires location access to show accurate data for your area. 
-										Your location is only used locally and never shared with third parties.
+										<strong>Note:</strong> Configure weather location in the "Custom Location" tab. Choose between auto-detect or custom city.
 									</p>
 								</div>
 							</div>
-								<!-- Brand Link Toggle -->
+							</div>
+						</div>
+
+						<!-- Custom Location Tab -->
+<input type="radio" name="preferences_tabs" class="tab" aria-label="Custom Location" />
+<div class="tab-content bg-base-100 border-base-300 p-6">
+<h4 class="font-semibold mb-4">Weather Location Settings</h4>
+
+<!-- Toggle for auto-detect location -->
+<div class="form-control mb-4">
+<label class="cursor-pointer label justify-start gap-4">
+<input type="checkbox" id="use-auto-location" class="toggle toggle-primary" />
+<span class="label-text">Enable Auto-Detect Location</span>
+</label>
+<p class="text-xs opacity-70 ml-14 mt-1">
+Automatically detect your location using your browser's geolocation. Weather widget will be enabled when you turn this on.
+</p>
+</div>
+
+<div class="divider">OR</div>
+
+<!-- Toggle for custom location -->
+<div class="form-control mb-4">
+<label class="cursor-pointer label justify-start gap-4">
+<input type="checkbox" id="use-custom-location" class="toggle toggle-primary" />
+<span class="label-text">Enable Custom Location</span>
+</label>
+<p class="text-xs opacity-70 ml-14 mt-1">
+Manually set your city for weather. Weather widget will be enabled when you turn this on.
+</p>
+</div>
+
+<div class="form-control mb-3">
+<label class="label">
+<span class="label-text">City or State Name</span>
+</label>
+<input 
+type="text" 
+id="custom-weather-city" 
+class="input input-bordered w-full focus:outline-none" 
+placeholder="e.g. Mumbai, Delhi, Kolkata, Chennai" 
+/>
+</div>
+<div class="text-xs opacity-70 mt-2">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 inline mr-1">
+<path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+</svg>
+<strong>Note:</strong> This location will only be used if you deny location access. Enter a city or state name, and we'll automatically find its coordinates.
+</div>
+</div>
+<!-- Brand Link Toggle -->
 								<!-- 
                 <div class="form-control">
                     <label class="cursor-pointer label justify-start gap-4">
@@ -328,3 +377,5 @@
 		<script type="module" src="../newtab/newtab.js"></script>
 	</body>
 </html>
+
+
