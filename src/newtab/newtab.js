@@ -175,6 +175,100 @@ async function displayRandomQuote() {
 	}
 }
 
+// Weather Functions
+async function fetchWeather() {
+	const apiKey = "46c79230372920d6e94c39178db24eb6";
+	
+	if (!apiKey) {
+		console.error("Weather API key not found");
+		return null;
+	}
+
+	try {
+		// Get user's location using browser's geolocation API
+		const position = await new Promise((resolve, reject) => {
+			navigator.geolocation.getCurrentPosition(resolve, reject, {
+				timeout: 10000,
+				enableHighAccuracy: false
+			});
+		});
+
+		const { latitude, longitude } = position.coords;
+		
+		// Fetch weather data
+		const response = await fetch(
+			`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
+		);
+
+		if (!response.ok) {
+			throw new Error(`Weather API error: ${response.status}`);
+		}
+
+		const data = await response.json();
+		return data;
+	} catch (error) {
+		console.error("Error fetching weather:", error);
+		
+		// Try to get weather from stored location if geolocation fails
+		if (browser && browser.storage) {
+			try {
+				const { lastWeatherCity } = await browser.storage.sync.get(['lastWeatherCity']);
+				if (lastWeatherCity) {
+					const response = await fetch(
+						`https://api.openweathermap.org/data/2.5/weather?q=${lastWeatherCity}&units=metric&appid=${apiKey}`
+					);
+					if (response.ok) {
+						return await response.json();
+					}
+				}
+			} catch (e) {
+				console.error("Fallback weather fetch failed:", e);
+			}
+		}
+		
+		return null;
+	}
+}
+
+function displayWeather(weatherData) {
+	if (!weatherData) {
+		const weatherWidget = document.getElementById("weather-widget");
+		if (weatherWidget) weatherWidget.style.display = "none";
+		return;
+	}
+
+	const cityElement = document.getElementById("weather-city");
+	const tempElement = document.getElementById("weather-temp");
+	const iconElement = document.getElementById("weather-icon");
+	const descElement = document.getElementById("weather-description");
+	const weatherWidget = document.getElementById("weather-widget");
+
+	if (!cityElement || !tempElement || !iconElement || !descElement) return;
+
+	// Display weather information
+	cityElement.textContent = weatherData.name;
+	tempElement.textContent = `${Math.round(weatherData.main.temp)}°C`;
+	descElement.textContent = weatherData.weather[0].description;
+
+	// Set weather icon
+	const iconCode = weatherData.weather[0].icon;
+	const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+	iconElement.src = iconUrl;
+	iconElement.style.display = "block";
+
+	weatherWidget.style.display = "block";
+
+	// Store city name for fallback
+	if (browser && browser.storage) {
+		browser.storage.sync.set({ lastWeatherCity: weatherData.name });
+	}
+}
+
+async function updateWeather() {
+	const weatherData = await fetchWeather();
+	displayWeather(weatherData);
+}
+
 async function setBackground() {
 	const backgroundElement = document.querySelector(".background");
 	if (!backgroundElement) return;
@@ -455,6 +549,7 @@ function setupEventListeners() {
 	const toggleQuote = document.getElementById("toggle-quote");
 	const toggleSeconds = document.getElementById("toggle-seconds");
 	const toggleBrand = document.getElementById("toggle-brand");
+	const toggleWeather = document.getElementById("toggle-weather");
 
 	const saveMessage = document.getElementById("save-message");
 
@@ -700,6 +795,7 @@ function setupEventListeners() {
 			let showQuote = toggleQuote ? toggleQuote.checked : true;
 			let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
 			let showBrand = toggleBrand ? toggleBrand.checked : true;
+			let showWeather = toggleWeather ? toggleWeather.checked : false;
 
 			let customName = "";
 			let customDate = null;
@@ -738,6 +834,7 @@ function setupEventListeners() {
 					quote: showQuote,
 					seconds: showSeconds,
 					brand: showBrand,
+					weather: showWeather,
 				},
 				wallpaperIndex: currentWallpaperIndex,
 				wallpaperRotationPaused: wallpaperRotationPaused,
@@ -755,7 +852,12 @@ function setupEventListeners() {
 					backgroundBrightness = brightness;
 					setBackground();
 
-					updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand);
+					updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand, showWeather);
+					
+					// Update weather if it's enabled
+					if (showWeather) {
+						updateWeather();
+					}
 
 					setTimeout(function () {
 						saveMessage.textContent = "";
@@ -816,12 +918,13 @@ function setActiveExam(exam) {
 	}
 }
 
-function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand) {
+function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand, showWeather) {
 	const dateTimeElement = document.getElementById("clock-class");
 	const countdownElement = document.getElementById("countdown-class");
 	const quoteElement = document.getElementById("quote-class");
 	const secondsElement = document.getElementById("seconds-container");
 	const brandElement = document.getElementById("brand-class");
+	const weatherElement = document.getElementById("weather-widget");
 
 	if (dateTimeElement) {
 		dateTimeElement.style.display = showDateTime ? "" : "none";
@@ -841,6 +944,10 @@ function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeco
 
 	if (brandElement) {
 		brandElement.style.display = showBrand ? "" : "none";
+	}
+
+	if (weatherElement) {
+		weatherElement.style.display = showWeather ? "" : "none";
 	}
 }
 
@@ -876,6 +983,7 @@ function loadUserPreferences() {
 		const toggleQuote = document.getElementById("toggle-quote");
 		const toggleSeconds = document.getElementById("toggle-seconds");
 		const toggleBrand = document.getElementById("toggle-brand");
+		const toggleWeather = document.getElementById("toggle-weather");
 
 		if (data.widgetVisibility) {
 			// Update toggle inputs
@@ -884,9 +992,22 @@ function loadUserPreferences() {
 			if (toggleQuote) toggleQuote.checked = data.widgetVisibility.quote;
 			if (toggleSeconds) toggleSeconds.checked = data.widgetVisibility.seconds;
 			if (toggleBrand) toggleBrand.checked = data.widgetVisibility.brand;
+			if (toggleWeather) toggleWeather.checked = data.widgetVisibility.weather === true;
 
 			// Apply visibility settings
-			updateWidgetVisibility(data.widgetVisibility.dateTime, data.widgetVisibility.countdown, data.widgetVisibility.quote, data.widgetVisibility.seconds, data.widgetVisibility.brand);
+			updateWidgetVisibility(
+				data.widgetVisibility.dateTime, 
+				data.widgetVisibility.countdown, 
+				data.widgetVisibility.quote, 
+				data.widgetVisibility.seconds, 
+				data.widgetVisibility.brand,
+				data.widgetVisibility.weather === true
+			);
+
+			// Update weather if enabled
+			if (data.widgetVisibility.weather === true) {
+				updateWeather();
+			}
 		}
 
 		console.log(currentExam);
@@ -932,6 +1053,7 @@ function initializePage() {
 	setInterval(updateDateTime, 1000);
 	setInterval(updateCountdown, 1000);
 	setInterval(displayRandomQuote, 3600000);
+	setInterval(updateWeather, 1800000); // Update weather every 30 minutes
 
 	setInterval(() => {
 		if (!wallpaperRotationPaused) {

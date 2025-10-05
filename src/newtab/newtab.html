@@ -151,6 +151,16 @@
 					</div>
 				</div>
 
+				<!-- Weather Widget -->
+				<div id="weather-widget" class="absolute right-0 bottom-12 text-right" style="display: none;">
+					<div id="weather-city" class="text-base font-medium"></div>
+					<div class="flex items-center justify-end gap-2 mt-1">
+						<img id="weather-icon" class="w-8 h-8" alt="Weather icon" style="display: none;" />
+						<div id="weather-temp" class="text-lg font-semibold"></div>
+					</div>
+					<div id="weather-description" class="text-xs opacity-70 capitalize"></div>
+				</div>
+
 				<!-- Branding -->
 				<div id="brand-class" class="absolute right-0 bottom-0">
 					<a id="novatra-link" href="https://novatra.in" target="_blank" rel="noopener" class="font-bold text-2xl">ηovatra</a>
@@ -251,6 +261,14 @@
 									<label class="cursor-pointer label justify-start gap-4">
 										<input type="checkbox" id="toggle-seconds" class="toggle toggle-primary" checked />
 										<span class="label-text">Seconds Countdown</span>
+									</label>
+								</div>
+
+								<!-- Weather Widget Toggle -->
+								<div class="form-control">
+									<label class="cursor-pointer label justify-start gap-4">
+										<input type="checkbox" id="toggle-weather" class="toggle toggle-primary" />
+										<span class="label-text">Show Weather Widget</span>
 									</label>
 								</div>
 
