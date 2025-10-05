@@ -657,6 +657,12 @@ function setupEventListeners() {
 
 	const optionsModal = document.getElementById("options-modal");
 	const preferencesForm = document.getElementById("preferences-form");
+	
+	console.log("🔍 Setup Event Listeners - Form element found:", !!preferencesForm);
+	if (preferencesForm) {
+		console.log("   Form ID:", preferencesForm.id);
+		console.log("   Form tag:", preferencesForm.tagName);
+	}
 
 	const examSelector = document.getElementById("exam-selector");
 	const customExam = getCustomExamData();
@@ -672,6 +678,7 @@ function setupEventListeners() {
 	const toggleCountdown = document.getElementById("toggle-countdown");
 	const toggleQuote = document.getElementById("toggle-quote");
 	const toggleSeconds = document.getElementById("toggle-seconds");
+	const toggleTodos = document.getElementById("toggle-todos");
 	const toggleBrand = document.getElementById("toggle-brand");
 	const toggleWeather = document.getElementById("toggle-weather");
 
@@ -931,7 +938,9 @@ function setupEventListeners() {
 		}
 	}
 	if (preferencesForm) {
+		   console.log("Preferences form found, attaching event listener");
 		   preferencesForm.addEventListener("submit", function (event) {
+			   console.log("🚀 FORM SUBMIT EVENT TRIGGERED");
 			   event.preventDefault();
    
    console.log("DEBUG - Form submitted! Elements:", {
@@ -1033,6 +1042,7 @@ function setupEventListeners() {
 		   browser.storage.sync
 				   .set(dataToSave)
 				   .then(() => {
+					   console.log("✅ Save successful!");
 					   saveMessage.textContent = "Preferences Saved!";
 					   saveMessage.style.color = "";
 
@@ -1172,14 +1182,6 @@ function loadUserPreferences() {
 			wallpaperRotationPaused = data.wallpaperRotationPaused;
 			// We'll update the icon after the DOM is fully loaded
 		}
-
-		const toggleDateTime = document.getElementById("toggle-datetime");
-		const toggleCountdown = document.getElementById("toggle-countdown");
-		const toggleQuote = document.getElementById("toggle-quote");
-		const toggleSeconds = document.getElementById("toggle-seconds");
-		const toggleTodos = document.getElementById("toggle-todos");
-		const toggleBrand = document.getElementById("toggle-brand");
-		const toggleWeather = document.getElementById("toggle-weather");
 
 		if (data.widgetVisibility) {
 			// Update toggle inputs
