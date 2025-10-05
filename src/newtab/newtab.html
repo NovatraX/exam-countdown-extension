@@ -19,6 +19,31 @@
 					<div id="current-date" class="text-sm opacity-80"></div>
 				</div>
 
+				<!-- Quick Todo Section (Top Right) -->
+				<div id="quick-todo-section" class="absolute top-20 right-0 opacity-70 max-w-xs">
+					<!-- Add Todo Button -->
+					<form id="quick-add-todo-form" class="mb-3">
+						<div class="flex gap-2">
+							<input type="text" id="quick-todo-input" placeholder="Add todo..."
+								class="input input-bordered input-sm bg-black/20 backdrop-blur-sm border-white/30 text-white placeholder-white/70 text-sm flex-1 focus:outline-none focus:border-primary/50"
+								autocomplete="off" />
+							<button type="submit" class="btn btn-primary btn-sm bglass">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+								</svg>
+							</button>
+						</div>
+					</form>
+
+					<!-- Quick Todo List -->
+					<div id="quick-todos-list" class="space-y-2 max-h-64 overflow-y-auto">
+						<!-- Todos will be dynamically inserted here -->
+						<div id="quick-empty-state" class="text-center py-3 opacity-60 text-white text-sm">
+							No todos yet
+						</div>
+					</div>
+				</div>
+
 				<div class="group fixed top-2 left-2 flex flex-col items-end space-y-2 z-10">
 					<!-- Settings Icon -->
 					<div class="tooltip tooltip-right" data-tip="Open Settings Menu">
@@ -30,6 +55,15 @@
 									d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"
 								/>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+							</svg>
+						</button>
+					</div>
+
+					<!-- Todo Icon -->
+					<div class="tooltip tooltip-right" data-tip="Open Todo List">
+						<button id="todo-btn" class="btn btn-circle scale-75 transform bg-base-200 opacity-0 shadow-lg transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
 							</svg>
 						</button>
 					</div>
@@ -264,6 +298,14 @@
 									</label>
 								</div>
 
+								<!-- Todo List Toggle -->
+								<div class="form-control">
+									<label class="cursor-pointer label justify-start gap-4">
+										<input type="checkbox" id="toggle-todos" class="toggle toggle-primary" checked />
+										<span class="label-text">Todo-List</span>
+									</label>
+								</div>
+
 							<!-- Weather Widget Toggle -->
 							<div class="form-control">
 								<label class="cursor-pointer label justify-start gap-4">
@@ -368,6 +410,70 @@ placeholder="e.g. Mumbai, Delhi, Kolkata, Chennai"
 					<button type="submit" class="btn btn-primary btn-block">Load Music</button>
 				</form>
 				<div id="youtube-embed" class="w-full aspect-video"></div>
+			</div>
+			<form method="dialog" class="modal-backdrop">
+				<button>close</button>
+			</form>
+		</dialog>
+
+		<!-- Todo List Modal -->
+		<dialog id="todo-modal" class="modal">
+			<div class="modal-box max-w-2xl bg-base-200 shadow-lg border border-base-300">
+				<form method="dialog">
+					<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+				</form>
+				<h3 class="font-bold text-xl mb-6 text-center text-primary">My Todo List</h3>
+
+				<!-- Todo Actions Bar -->
+				<div class="flex justify-between items-center mb-4 gap-2">
+					<button id="mark-all-done-btn" class="btn btn-sm btn-outline btn-success" title="Mark all as done">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						Mark All Done
+					</button>
+					<button id="clear-all-btn" class="btn btn-sm btn-outline btn-error" title="Delete all todos">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+						</svg>
+						Clear All
+					</button>
+				</div>
+
+				<!-- Add Todo Form -->
+				<form id="add-todo-form" class="mb-6">
+					<div class="form-control">
+						<div class="input-group flex gap-2">
+							<input type="text" id="todo-input" placeholder="Add a new todo... (Press Enter or Ctrl+Enter)" class="input input-bordered w-full focus:outline-none" autocomplete="off" />
+							<button type="submit" class="btn btn-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+								</svg>
+								Add
+							</button>
+						</div>
+						<label class="label">
+							<span class="label-text-alt opacity-70">💡 Tip: Press Ctrl+Enter to quickly add todos</span>
+						</label>
+					</div>
+				</form>
+
+				<!-- Todos List -->
+				<div id="todos-container" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+					<!-- Todos will be dynamically inserted here -->
+					<div id="empty-state" class="text-center py-12 opacity-60">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4 opacity-50">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+						</svg>
+						<p class="text-lg font-medium">No todos yet!</p>
+						<p class="text-sm mt-2">Add your first todo to get started</p>
+					</div>
+				</div>
+
+				<!-- Todo Stats -->
+				<div id="todo-stats" class="mt-6 pt-4 border-t border-base-300 text-center text-sm opacity-70">
+					<span id="stats-text">0 tasks</span>
+				</div>
 			</div>
 			<form method="dialog" class="modal-backdrop">
 				<button>close</button>

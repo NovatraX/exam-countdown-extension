@@ -1,4 +1,6 @@
 import browser from "webextension-polyfill";
+import { initializeTodoUI } from "./todo-ui.js";
+import { initializeQuickTodoUI } from "./quick-todo-ui.js";
 
 let customExamName = "Custom Exam";
 let customExamDate = null;
@@ -943,14 +945,13 @@ function setupEventListeners() {
 			   let wallpaperUrl = customWallpaperInput.value.trim();
 			   let brightness = parseFloat(brightnessSlider.value);
 
-			   let showDateTime = toggleDateTime ? toggleDateTime.checked : true;
-			   let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
-			   let showQuote = toggleQuote ? toggleQuote.checked : true;
-			   let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
-			   let showBrand = toggleBrand ? toggleBrand.checked : true;
-			   let showWeather = toggleWeather ? toggleWeather.checked : false;
-
-			   let customName = "";
+		   let showDateTime = toggleDateTime ? toggleDateTime.checked : true;
+		   let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
+		   let showQuote = toggleQuote ? toggleQuote.checked : true;
+		   let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
+		   let showTodos = toggleTodos ? toggleTodos.checked : true;
+		   let showBrand = toggleBrand ? toggleBrand.checked : true;
+		   let showWeather = toggleWeather ? toggleWeather.checked : false;			   let customName = "";
 			   let customDate = null;
 
 		   // Weather location settings
@@ -1014,6 +1015,7 @@ function setupEventListeners() {
 					   countdown: showCountdown,
 					   quote: showQuote,
 					   seconds: showSeconds,
+					   todos: showTodos,
 					   brand: showBrand,
 					   weather: showWeather,
 				   },
@@ -1036,13 +1038,11 @@ function setupEventListeners() {
 
 					   setActiveExam(activeExam);
 
-					   customWallpaper = wallpaperUrl;
-					   backgroundBrightness = brightness;
-					   setBackground();
+				   customWallpaper = wallpaperUrl;
+				   backgroundBrightness = brightness;
+				   setBackground();
 
-					   updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand, showWeather);
-                   
-				   // Update weather if it's enabled
+				   updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showTodos, showBrand, showWeather);				   // Update weather if it's enabled
 				   if (showWeather) {
 					   console.log("Weather is enabled, calling updateWeather()");
 					   updateWeather();
@@ -1107,11 +1107,12 @@ function setActiveExam(exam) {
 	}
 }
 
-function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand, showWeather) {
+function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showTodos, showBrand, showWeather) {
 	const dateTimeElement = document.getElementById("clock-class");
 	const countdownElement = document.getElementById("countdown-class");
 	const quoteElement = document.getElementById("quote-class");
 	const secondsElement = document.getElementById("seconds-container");
+	const todosElement = document.getElementById("quick-todo-section");
 	const brandElement = document.getElementById("brand-class");
 	const weatherElement = document.getElementById("weather-widget");
 
@@ -1129,6 +1130,10 @@ function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeco
 
 	if (secondsElement) {
 		secondsElement.style.display = showSeconds ? "" : "none";
+	}
+
+	if (todosElement) {
+		todosElement.style.display = showTodos ? "" : "none";
 	}
 
 	if (brandElement) {
@@ -1172,6 +1177,7 @@ function loadUserPreferences() {
 		const toggleCountdown = document.getElementById("toggle-countdown");
 		const toggleQuote = document.getElementById("toggle-quote");
 		const toggleSeconds = document.getElementById("toggle-seconds");
+		const toggleTodos = document.getElementById("toggle-todos");
 		const toggleBrand = document.getElementById("toggle-brand");
 		const toggleWeather = document.getElementById("toggle-weather");
 
@@ -1181,6 +1187,7 @@ function loadUserPreferences() {
 			if (toggleCountdown) toggleCountdown.checked = data.widgetVisibility.countdown;
 			if (toggleQuote) toggleQuote.checked = data.widgetVisibility.quote;
 			if (toggleSeconds) toggleSeconds.checked = data.widgetVisibility.seconds;
+			if (toggleTodos) toggleTodos.checked = data.widgetVisibility.todos !== false;
 			if (toggleBrand) toggleBrand.checked = data.widgetVisibility.brand;
 			if (toggleWeather) toggleWeather.checked = data.widgetVisibility.weather === true;
 
@@ -1190,18 +1197,19 @@ function loadUserPreferences() {
 				data.widgetVisibility.countdown, 
 				data.widgetVisibility.quote, 
 				data.widgetVisibility.seconds, 
+				data.widgetVisibility.todos !== false,
 				data.widgetVisibility.brand,
-			data.widgetVisibility.weather === true
-		);
+				data.widgetVisibility.weather === true
+			);
 
-		// Update weather if enabled
-		if (data.widgetVisibility.weather === true) {
-			console.log("Weather widget is enabled on page load, fetching weather...");
-			updateWeather();
-		} else {
-			console.log("Weather widget is disabled on page load, weather status:", data.widgetVisibility?.weather);
-		}
-	}		console.log(currentExam);
+			// Update weather if enabled
+			if (data.widgetVisibility.weather === true) {
+				console.log("Weather widget is enabled on page load, fetching weather...");
+				updateWeather();
+			} else {
+				console.log("Weather widget is disabled on page load, weather status:", data.widgetVisibility?.weather);
+			}
+		}		console.log(currentExam);
 
 		updateNovatraLink(currentExam);
 		setBackground();
@@ -1255,8 +1263,9 @@ function initializePage() {
 
 document.addEventListener("DOMContentLoaded", () => {
 	initializePage();
+	initializeTodoUI(); // Initialize todo functionality
+	initializeQuickTodoUI(); // Initialize quick todo in top-right
 	const refetchBtn = document.getElementById("refetch-data-btn").addEventListener("click", refetchData);
-
 });
 
 function updatePauseButtonIcon() {
