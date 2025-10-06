@@ -204,23 +204,42 @@ async function fetchWeather() {
 			console.log("Using custom location (user preference):", customWeatherLocation.city);
 			cityName = customWeatherLocation.city;
 			
-			// Geocode the city name
+			// Geocode the city name with better error handling
 			try {
-				const geoResp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(customWeatherLocation.city)}&count=1`);
+				const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(customWeatherLocation.city)}&count=1&language=en&format=json`;
+				console.log("Fetching geocoding data from:", geoUrl);
+				
+				const geoResp = await fetch(geoUrl, {
+					method: 'GET',
+					headers: {
+						'Accept': 'application/json'
+					},
+					signal: AbortSignal.timeout(10000) // 10 second timeout
+				});
+				
 				if (geoResp.ok) {
 					const geoData = await geoResp.json();
 					console.log("Geocoding API response:", geoData);
-					if (geoData.results && geoData.results[0]) {
+					if (geoData.results && geoData.results.length > 0) {
 						latitude = geoData.results[0].latitude;
 						longitude = geoData.results[0].longitude;
-						console.log("Geocoded custom location to:", latitude, longitude);
+						cityName = geoData.results[0].name || customWeatherLocation.city;
+						console.log("✅ Geocoded custom location to:", { city: cityName, latitude, longitude });
 						locationFound = true;
 					} else {
-						console.warn("No geocoding results found for:", customWeatherLocation.city);
+						console.warn("⚠️ No geocoding results found for:", customWeatherLocation.city);
+						console.warn("Please check if the city name is spelled correctly.");
 					}
+				} else {
+					console.error("❌ Geocoding API returned error status:", geoResp.status, geoResp.statusText);
 				}
 			} catch (e) {
-				console.error("City geocoding failed:", e);
+				console.error("❌ City geocoding failed:", e.message || e);
+				console.warn("Possible causes:");
+				console.warn("1. Network connectivity issues");
+				console.warn("2. Geocoding service temporarily unavailable");
+				console.warn("3. Invalid city name format");
+				console.warn("Please try again later or use auto-detect location instead.");
 			}
 		} 
 		// Priority 2: Auto-detect location (if enabled and custom not used)
@@ -267,17 +286,24 @@ async function fetchWeather() {
 	}
 		
 		if (latitude == null || longitude == null) {
-			console.warn("No valid coordinates available for weather");
+			console.warn("⚠️ No valid coordinates available for weather");
 			return null;
 		}
 		
 		// Fetch weather data from Open-Meteo (free, no API key required)
-		const weatherResponse = await fetch(
-			`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
-		);
+		const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`;
+		console.log("Fetching weather data from:", weatherUrl);
+		
+		const weatherResponse = await fetch(weatherUrl, {
+			method: 'GET',
+			headers: {
+				'Accept': 'application/json'
+			},
+			signal: AbortSignal.timeout(10000) // 10 second timeout
+		});
 		
 		if (!weatherResponse.ok) {
-			throw new Error(`Weather API error: ${weatherResponse.status}`);
+			throw new Error(`Weather API error: ${weatherResponse.status} ${weatherResponse.statusText}`);
 		}
 		
 		const weatherData = await weatherResponse.json();
@@ -294,7 +320,20 @@ async function fetchWeather() {
 			coords: { latitude, longitude }
 		};
 	} catch (error) {
-		console.error("Weather: Error fetching weather data:", error);
+		console.error("❌ Weather: Error fetching weather data:", error.message || error);
+		
+		// Provide helpful error messages based on error type
+		if (error.name === 'TypeError' && error.message.includes('fetch')) {
+			console.error("📡 Network error - Please check your internet connection");
+			console.error("   This could be due to:");
+			console.error("   • No internet connection");
+			console.error("   • Firewall blocking API requests");
+			console.error("   • VPN or proxy interfering with requests");
+			console.error("   • Weather/Geocoding service temporarily down");
+		} else if (error.name === 'AbortError') {
+			console.error("⏱️ Request timeout - The API took too long to respond");
+		}
+		
 		return null;
 	}
 }// Convert WMO weather codes to descriptions
@@ -360,17 +399,23 @@ function getWeatherIcon(code) {
 }
 
 function displayWeather(weatherData) {
-	if (!weatherData) {
-		const weatherWidget = document.getElementById("weather-widget");
-		if (weatherWidget) weatherWidget.style.display = "none";
-		return;
-	}
-
+	const weatherWidget = document.getElementById("weather-widget");
 	const cityElement = document.getElementById("weather-city");
 	const tempElement = document.getElementById("weather-temp");
 	const iconElement = document.getElementById("weather-icon");
 	const descElement = document.getElementById("weather-description");
-	const weatherWidget = document.getElementById("weather-widget");
+	
+	if (!weatherWidget) return;
+	
+	if (!weatherData) {
+		// Show error message in widget instead of hiding it
+		if (cityElement) cityElement.textContent = "Weather Unavailable";
+		if (tempElement) tempElement.textContent = "--°C";
+		if (descElement) descElement.textContent = "Check console for details";
+		if (iconElement) iconElement.style.display = "none";
+		weatherWidget.style.display = "block";
+		return;
+	}
 
 	if (!cityElement || !tempElement || !iconElement || !descElement) return;
 
@@ -386,6 +431,7 @@ function displayWeather(weatherData) {
 	iconElement.style.display = "block";
 
 	weatherWidget.style.display = "block";
+	console.log("✅ Weather displayed successfully:", weatherData.name, weatherData.main.temp + "°C");
 }
 
 async function updateWeather() {
@@ -662,6 +708,8 @@ function setupEventListeners() {
 	if (preferencesForm) {
 		console.log("   Form ID:", preferencesForm.id);
 		console.log("   Form tag:", preferencesForm.tagName);
+		console.log("   Form parent:", preferencesForm.parentElement?.tagName);
+		console.log("   Form children count:", preferencesForm.children.length);
 	}
 
 	const examSelector = document.getElementById("exam-selector");
@@ -937,6 +985,16 @@ function setupEventListeners() {
 			}
 		}
 	}
+	
+	// Add backup button click handler in case form submit doesn't work
+	const savePreferencesBtn = document.getElementById("save-preferences-btn");
+	if (savePreferencesBtn) {
+		console.log("Save button found, adding click handler");
+		savePreferencesBtn.addEventListener("click", function(e) {
+			console.log("💡 BUTTON CLICKED DIRECTLY");
+		});
+	}
+	
 	if (preferencesForm) {
 		   console.log("Preferences form found, attaching event listener");
 		   preferencesForm.addEventListener("submit", function (event) {
