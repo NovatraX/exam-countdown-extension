@@ -133,7 +133,7 @@ function createQuickTodoElement(todo) {
     input.value = todo.text;
     input.className =
       "text-sm flex-1 p-1 rounded bg-black/30 text-white border border-white/20";
-    div.replaceChild(input, textSpan);
+    textSpan.replaceWith(input);
 
     // Save and cancel buttons
     const saveBtn = document.createElement("button");
