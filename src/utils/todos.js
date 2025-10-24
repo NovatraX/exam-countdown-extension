@@ -122,3 +122,31 @@ export async function getTodosStats() {
     pending: todos.filter((t) => !t.completed).length,
   };
 }
+
+/**
+ * Update an existing todo by id
+ * @param {string} id - Todo ID
+ * @param {string} newText - Updated todo text
+ * @returns {Promise<boolean>} Success status
+ */
+export async function updateTodo(id, newText) {
+  if (!newText || newText.trim() === "") {
+    throw new Error("Todo text cannot be empty");
+  }
+
+  try {
+    const todos = await getTodos();
+    const index = todos.findIndex((t) => t.id === id);
+
+    if (index === -1) {
+      throw new Error("Todo not found");
+    }
+
+    todos[index].text = newText.trim();
+    await saveTodos(todos);
+    return true;
+  } catch (error) {
+    console.error("Error updating todo:", error);
+    return false;
+  }
+}
