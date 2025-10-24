@@ -3,6 +3,7 @@ import {
   addTodo,
   toggleTodo,
   deleteTodo,
+  updateTodo,
   getTodosStats,
 } from "../utils/todos.js";
 
@@ -112,6 +113,53 @@ function createQuickTodoElement(todo) {
     todo.text.length > 30 ? todo.text.substring(0, 30) + "..." : todo.text;
   textSpan.title = todo.text; // Show full text on hover
 
+  // Edit button
+  const editBtn = document.createElement("button");
+  editBtn.className =
+    "btn btn-ghost btn-circle btn-xs text-white/70 hover:text-blue-400 flex-shrink-0";
+  editBtn.title = "Edit todo";
+  editBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+         stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+      <path stroke-linecap="round" stroke-linejoin="round" 
+            d="M16.862 3.487a2.25 2.25 0 013.182 3.182L7.5 19.213H4.5v-3l12.362-12.726z" />
+    </svg>
+  `;
+
+  // Edit button click handler
+  editBtn.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = todo.text;
+    input.className =
+      "text-sm flex-1 p-1 rounded bg-black/30 text-white border border-white/20";
+    div.replaceChild(input, textSpan);
+
+    // Save and cancel buttons
+    const saveBtn = document.createElement("button");
+    saveBtn.innerHTML = "✔";
+    saveBtn.className = "btn btn-ghost btn-xs text-green-500 ml-1";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.innerHTML = "✖";
+    cancelBtn.className = "btn btn-ghost btn-xs text-red-500 ml-1";
+
+    div.appendChild(saveBtn);
+    div.appendChild(cancelBtn);
+    editBtn.style.display = "none"; // hide edit icon while editing
+
+    saveBtn.addEventListener("click", async () => {
+      const newText = input.value.trim();
+      if (newText && newText !== todo.text) {
+        await updateTodo(todo.id, newText);
+      }
+      renderQuickTodos();
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      renderQuickTodos();
+    });
+  });
+
   // Delete button
   const deleteBtn = document.createElement("button");
   deleteBtn.className =
@@ -129,6 +177,7 @@ function createQuickTodoElement(todo) {
 
   div.appendChild(checkbox);
   div.appendChild(textSpan);
+  div.appendChild(editBtn);
   div.appendChild(deleteBtn);
 
   return div;
