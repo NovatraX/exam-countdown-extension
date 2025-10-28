@@ -3,6 +3,7 @@ import {
   addTodo,
   toggleTodo,
   deleteTodo,
+  updateTodo,
   markAllCompleted,
   clearAllTodos,
   getTodosStats,
@@ -92,7 +93,7 @@ async function renderTodos() {
 
   if (!todosContainer) return;
 
-  const todos = await getTodos();
+  const todos = (await getTodos()).reverse();
 
   // Clear container except empty state
   const todoItems = todosContainer.querySelectorAll(".todo-item");
@@ -143,6 +144,96 @@ function createTodoElement(todo) {
   }`;
   textSpan.textContent = todo.text;
 
+  // Edit button
+  const editBtn = document.createElement("button");
+  editBtn.className =
+    "btn btn-ghost btn-circle btn-sm text-primary flex-shrink-0";
+  editBtn.title = "Edit todo";
+  editBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+         stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round" 
+            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+  `;
+
+  // Edit button click handler
+  editBtn.addEventListener("click", () => {
+    if (!todo.completed) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = todo.text;
+      input.className = "input input-bordered input-sm w-full";
+
+      // Create simple save and cancel buttons
+      const saveBtn = document.createElement("button");
+      saveBtn.innerHTML = "✔";
+      saveBtn.className = "btn btn-ghost btn-sm text-success flex-shrink-0";
+      saveBtn.title = "Save changes";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.innerHTML = "✖";
+      cancelBtn.className = "btn btn-ghost btn-sm text-error flex-shrink-0";
+      cancelBtn.title = "Cancel editing";
+
+      // Replace text span with input and add action buttons
+      textSpan.replaceWith(input);
+      editBtn.style.display = "none";
+      deleteBtn.style.display = "none";
+      div.appendChild(saveBtn);
+      div.appendChild(cancelBtn);
+
+      // Focus input
+      input.focus();
+
+      // Save button click handler
+      saveBtn.addEventListener("click", async () => {
+        const newText = input.value.trim();
+        if (newText && newText !== todo.text) {
+          try {
+            await updateTodo(todo.id, newText);
+            renderTodos();
+            showToast("Todo updated successfully!", "success");
+          } catch (error) {
+            showToast("Failed to update todo", "error");
+          }
+        } else {
+          renderTodos();
+        }
+      });
+
+      // Cancel button click handler
+      cancelBtn.addEventListener("click", () => {
+        renderTodos();
+      });
+
+      // Handle keyboard shortcuts
+      input.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const newText = input.value.trim();
+          if (newText && newText !== todo.text) {
+            await updateTodo(todo.id, newText);
+            renderTodos();
+            showToast("Todo updated successfully!", "success");
+          } else {
+            renderTodos();
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          input.replaceWith(textSpan);
+          saveBtn.remove();
+          cancelBtn.remove();
+          editBtn.style.display = "";
+          deleteBtn.style.display = "";
+          showToast("Edit cancelled", "info");
+        }
+      });
+    } else {
+      showToast("Cannot edit completed todo", "info");
+    }
+  });
+
   // Delete button
   const deleteBtn = document.createElement("button");
   deleteBtn.className =
@@ -161,6 +252,7 @@ function createTodoElement(todo) {
 
   div.appendChild(checkbox);
   div.appendChild(textSpan);
+  div.appendChild(editBtn);
   div.appendChild(deleteBtn);
 
   return div;
