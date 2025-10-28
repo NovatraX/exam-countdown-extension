@@ -3,6 +3,7 @@ import {
   addTodo,
   toggleTodo,
   deleteTodo,
+  updateTodo,
   getTodosStats,
 } from "../utils/todos.js";
 
@@ -112,6 +113,71 @@ function createQuickTodoElement(todo) {
     todo.text.length > 30 ? todo.text.substring(0, 30) + "..." : todo.text;
   textSpan.title = todo.text; // Show full text on hover
 
+  // Edit button
+  const editBtn = document.createElement("button");
+  editBtn.className =
+    "btn btn-ghost btn-circle btn-xs text-white/70 hover:text-blue-400 flex-shrink-0";
+  editBtn.title = "Edit todo";
+  editBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+         stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+      <path stroke-linecap="round" stroke-linejoin="round" 
+            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+  `;
+
+  // Edit button click handler
+  editBtn.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = todo.text;
+    input.className =
+      "text-sm flex-1 p-1 rounded bg-black/30 text-white border border-white/20";
+    textSpan.replaceWith(input);
+
+    // Save and cancel buttons
+    const saveBtn = document.createElement("button");
+    saveBtn.innerHTML = "✔";
+    saveBtn.className = "btn btn-ghost btn-xs text-green-500 ml-1";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.innerHTML = "✖";
+    cancelBtn.className = "btn btn-ghost btn-xs text-red-500 ml-1";
+
+    div.appendChild(saveBtn);
+    div.appendChild(cancelBtn);
+    editBtn.style.display = "none"; // hide edit icon while editing
+    deleteBtn.style.display = "none"; // hide delete icon while editing
+
+    // Focus input
+    input.focus();
+
+    // Save function
+    const saveChanges = async () => {
+      const newText = input.value.trim();
+      if (newText && newText !== todo.text) {
+        await updateTodo(todo.id, newText);
+      }
+      renderQuickTodos();
+    };
+
+    // Save button click handler
+    saveBtn.addEventListener("click", saveChanges);
+
+    // Cancel button click handler
+    cancelBtn.addEventListener("click", () => {
+      renderQuickTodos();
+    });
+
+    // Keyboard shortcuts
+    input.addEventListener("keyup", async (e) => {
+      if (e.key === "Enter") {
+        await saveChanges();
+      } else if (e.key === "Escape") {
+        renderQuickTodos();
+      }
+    });
+  });
+
   // Delete button
   const deleteBtn = document.createElement("button");
   deleteBtn.className =
@@ -129,6 +195,7 @@ function createQuickTodoElement(todo) {
 
   div.appendChild(checkbox);
   div.appendChild(textSpan);
+  div.appendChild(editBtn);
   div.appendChild(deleteBtn);
 
   return div;
