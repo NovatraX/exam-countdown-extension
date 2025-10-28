@@ -159,7 +159,9 @@ function createTodoElement(todo) {
 
   // Edit button click handler
   editBtn.addEventListener("click", () => {
-    if (!todo.completed) {
+    if (todo.completed) {
+      showToast("Cannot edit completed todo", "info");
+    } else {
       const input = document.createElement("input");
       input.type = "text";
       input.value = todo.text;
@@ -195,6 +197,7 @@ function createTodoElement(todo) {
             renderTodos();
             showToast("Todo updated successfully!", "success");
           } catch (error) {
+            console.error("Failed to update todo:", error);
             showToast("Failed to update todo", "error");
           }
         } else {
@@ -229,8 +232,6 @@ function createTodoElement(todo) {
           showToast("Edit cancelled", "info");
         }
       });
-    } else {
-      showToast("Cannot edit completed todo", "info");
     }
   });
 
