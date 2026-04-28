@@ -4,109 +4,330 @@ let customExamName = "Custom Exam";
 let customExamDate = null;
 
 async function loadCustomExamData() {
-	if (!browser.storage || !browser.storage.sync) return;
+  if (!browser.storage || !browser.storage.sync) return;
 
-	try {
-		const data = await browser.storage.sync.get(["customExamName", "customExamDate"]);
-		if (data.customExamName) {
-			customExamName = data.customExamName;
-		}
+  try {
+    const data = await browser.storage.sync.get([
+      "customExamName",
+      "customExamDate",
+    ]);
+    if (data.customExamName) {
+      customExamName = data.customExamName;
+    }
 
-		if (data.customExamDate) {
-			customExamDate = new Date(data.customExamDate);
-		}
-	} catch (error) {
-		console.error("Error loading custom exam data:", error);
-	}
+    if (data.customExamDate) {
+      customExamDate = new Date(data.customExamDate);
+    }
+  } catch (error) {
+    console.error("Error loading custom exam data:", error);
+  }
 }
 
 function saveCustomExamData(name, date) {
-	if (!browser.storage || !browser.storage.sync) return false;
+  if (!browser.storage || !browser.storage.sync) return false;
 
-	customExamName = name || "Custom Exam";
-	customExamDate = date;
+  customExamName = name || "Custom Exam";
+  customExamDate = date;
 
-	let dateValueToStore = null;
-    if (customExamDate && !isNaN(customExamDate.getTime())) {
-        dateValueToStore = customExamDate.toISOString(); 
-    }
+  let dateValueToStore = null;
+  if (customExamDate && !isNaN(customExamDate.getTime())) {
+    dateValueToStore = customExamDate.toISOString();
+  }
 
-	try {
-		browser.storage.sync.set({
-			customExamName: customExamName,
-			customExamDate: dateValueToStore,
-		});
-		return true;
-	} catch (error) {
-		console.error("Error saving custom exam data:", error);
-		return false;
-	}
+  try {
+    browser.storage.sync.set({
+      customExamName: customExamName,
+      customExamDate: dateValueToStore,
+    });
+    return true;
+  } catch (error) {
+    console.error("Error saving custom exam data:", error);
+    return false;
+  }
 }
 
 function getCustomExamData() {
-	return {
-		name: customExamName,
-		date: customExamDate,
-	};
+  return {
+    name: customExamName,
+    date: customExamDate,
+  };
 }
 
 function hasValidCustomExam() {
-	return customExamDate && !isNaN(customExamDate.getTime());
+  return customExamDate && !isNaN(customExamDate.getTime());
 }
 
 function getTimeRemaining(endDate, showSeconds = true) {
-	const total = endDate - new Date();
+  const total = endDate - new Date();
 
-	const month = Math.floor(total / (1000 * 60 * 60 * 24 * 30));
-	const days = Math.floor((total % (1000 * 60 * 60 * 24 * 30)) / (1000 * 60 * 60 * 24));
-	const hours = Math.floor((total % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-	const minutes = Math.floor((total % (1000 * 60 * 60)) / (1000 * 60));
+  const month = Math.floor(total / (1000 * 60 * 60 * 24 * 30));
+  const days = Math.floor(
+    (total % (1000 * 60 * 60 * 24 * 30)) / (1000 * 60 * 60 * 24),
+  );
+  const hours = Math.floor((total % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((total % (1000 * 60 * 60)) / (1000 * 60));
 
-	let result = { total, month, days, hours, minutes };
+  let result = { total, month, days, hours, minutes };
 
-	if (showSeconds) {
-		const seconds = Math.floor((total % (1000 * 60)) / 1000);
-		result.seconds = seconds;
-	}
+  if (showSeconds) {
+    const seconds = Math.floor((total % (1000 * 60)) / 1000);
+    result.seconds = seconds;
+  }
 
-	return result;
+  return result;
 }
 
-const backgrounds = ["https://www.ghibli.jp/gallery/kimitachi016.jpg", "https://www.ghibli.jp/gallery/redturtle024.jpg", "https://www.ghibli.jp/gallery/marnie022.jpg", "https://www.ghibli.jp/gallery/kazetachinu050.jpg"];
+const backgrounds = [
+  "https://www.ghibli.jp/gallery/kazetachinu050.jpg",
+  "https://www.ghibli.jp/gallery/kimitachi016.jpg",
+  "https://www.ghibli.jp/gallery/redturtle024.jpg",
+  "https://www.ghibli.jp/gallery/marnie022.jpg",
+];
+
+const LOCAL_WALLPAPER_DB_NAME = "novatra-wallpapers";
+const LOCAL_WALLPAPER_STORE_NAME = "wallpapers";
+const LOCAL_WALLPAPER_KEY = "active-wallpaper";
+const MAX_LOCAL_WALLPAPER_HEIGHT = 1080;
+const MAX_LOCAL_WALLPAPER_WIDTH = 1920;
+const LOCAL_WALLPAPER_DB_VERSION = 1;
+const LOCAL_WALLPAPER_QUALITY = 0.85;
 
 let wallpapersList = [];
 let customWallpaper = "";
 let backgroundBrightness = 0.4;
 let currentWallpaperIndex = -1;
+let hasUploadedWallpaper = false;
 let wallpaperRotationPaused = false;
+let uploadedWallpaperObjectUrl = "";
 
 let currentExam = "jeeAdv";
 
 async function setDefaultExam() {
-	try {
-		const examInfo = await browser.storage.sync.get("exams");
+  try {
+    const examInfo = await browser.storage.sync.get("exams");
 
-		if (Array.isArray(examInfo.exams)) {
-			let defaultExamFound = false;
+    if (Array.isArray(examInfo.exams)) {
+      let defaultExamFound = false;
 
-			examInfo.exams.forEach((exam) => {
-				console.log(exam);
+      examInfo.exams.forEach((exam) => {
+        console.log(exam);
 
-				if (exam.default === true) {
-					currentExam = exam.name;
-					defaultExamFound = true;
-				}
-			});
+        if (exam.default === true) {
+          currentExam = exam.name;
+          defaultExamFound = true;
+        }
+      });
 
-			if (!defaultExamFound) {
-				console.warn("No Defaut Exam Found! Using Fallback :", currentExam);
-			}
-		} else {
-			console.error("Exams Data Is Not An Array : ", examInfo.exams);
-		}
-	} catch (error) {
-		console.error("Error Retriving Exam Info : ", error);
-	}
+      if (!defaultExamFound) {
+        console.warn("No Defaut Exam Found! Using Fallback :", currentExam);
+      }
+    } else {
+      console.error("Exams Data Is Not An Array : ", examInfo.exams);
+    }
+  } catch (error) {
+    console.error("Error Retriving Exam Info : ", error);
+  }
+}
+
+function openWallpaperDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(
+      LOCAL_WALLPAPER_DB_NAME,
+      LOCAL_WALLPAPER_DB_VERSION,
+    );
+
+    request.onupgradeneeded = function () {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(LOCAL_WALLPAPER_STORE_NAME)) {
+        db.createObjectStore(LOCAL_WALLPAPER_STORE_NAME, { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = function () {
+      resolve(request.result);
+    };
+
+    request.onerror = function () {
+      reject(request.error);
+    };
+  });
+}
+
+async function getUploadedWallpaperRecord() {
+  const db = await openWallpaperDb();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(LOCAL_WALLPAPER_STORE_NAME, "readonly");
+    const store = transaction.objectStore(LOCAL_WALLPAPER_STORE_NAME);
+    const request = store.get(LOCAL_WALLPAPER_KEY);
+
+    request.onsuccess = function () {
+      resolve(request.result || null);
+    };
+
+    request.onerror = function () {
+      reject(request.error);
+    };
+
+    transaction.oncomplete = function () {
+      db.close();
+    };
+
+    transaction.onerror = function () {
+      db.close();
+    };
+  });
+}
+
+async function saveUploadedWallpaperBlob(blob, originalFileName) {
+  const db = await openWallpaperDb();
+  const record = {
+    id: LOCAL_WALLPAPER_KEY,
+    blob,
+    name: originalFileName || "Uploaded wallpaper",
+    type: blob.type,
+    size: blob.size,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(LOCAL_WALLPAPER_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(LOCAL_WALLPAPER_STORE_NAME);
+    const request = store.put(record);
+
+    request.onsuccess = function () {
+      resolve(record);
+    };
+
+    request.onerror = function () {
+      reject(request.error);
+    };
+
+    transaction.oncomplete = function () {
+      db.close();
+    };
+
+    transaction.onerror = function () {
+      db.close();
+    };
+  });
+}
+
+async function deleteUploadedWallpaper() {
+  const db = await openWallpaperDb();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(LOCAL_WALLPAPER_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(LOCAL_WALLPAPER_STORE_NAME);
+    const request = store.delete(LOCAL_WALLPAPER_KEY);
+
+    request.onsuccess = function () {
+      resolve();
+    };
+
+    request.onerror = function () {
+      reject(request.error);
+    };
+
+    transaction.oncomplete = function () {
+      db.close();
+    };
+
+    transaction.onerror = function () {
+      db.close();
+    };
+  });
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const imageUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = function () {
+      URL.revokeObjectURL(imageUrl);
+      resolve(image);
+    };
+
+    image.onerror = function () {
+      URL.revokeObjectURL(imageUrl);
+      reject(new Error("Could not load the selected image."));
+    };
+
+    image.src = imageUrl;
+  });
+}
+
+async function compressWallpaperFile(file) {
+  if (!file || !file.type || !file.type.startsWith("image/")) {
+    throw new Error("Please select a valid image file.");
+  }
+
+  const image = await loadImageElement(file);
+  const scale = Math.min(
+    1,
+    MAX_LOCAL_WALLPAPER_WIDTH / image.naturalWidth,
+    MAX_LOCAL_WALLPAPER_HEIGHT / image.naturalHeight,
+  );
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, width, height);
+
+  let compressedBlob = await canvasToBlob(
+    canvas,
+    "image/webp",
+    LOCAL_WALLPAPER_QUALITY,
+  );
+
+  if (!compressedBlob || compressedBlob.type !== "image/webp") {
+    compressedBlob = await canvasToBlob(
+      canvas,
+      "image/jpeg",
+      LOCAL_WALLPAPER_QUALITY,
+    );
+  }
+
+  if (!compressedBlob) {
+    throw new Error("Could not process the selected image.");
+  }
+
+  return compressedBlob;
+}
+
+async function updateUploadedWallpaperStatus(statusElement, removeButton) {
+  try {
+    const record = await getUploadedWallpaperRecord();
+    hasUploadedWallpaper = Boolean(record?.blob);
+
+    if (statusElement) {
+      statusElement.textContent = hasUploadedWallpaper
+        ? record.name || "Uploaded wallpaper"
+        : "No file chosen";
+    }
+
+    if (removeButton) {
+      removeButton.disabled = !hasUploadedWallpaper;
+    }
+  } catch (error) {
+    console.error("Failed to read uploaded wallpaper status:", error);
+
+    if (statusElement) {
+      statusElement.textContent = "Could not load file name";
+    }
+  }
 }
 
 const fallbackMotivationalQuotes = [
@@ -173,843 +394,1076 @@ const fallbackMotivationalQuotes = [
 ];
 
 function updateDateTime() {
-	const now = new Date();
+  const now = new Date();
 
-	const currentDateElement = document.getElementById("current-date");
-	const currentTimeElement = document.getElementById("current-time");
+  const currentDateElement = document.getElementById("current-date");
+  const currentTimeElement = document.getElementById("current-time");
 
-	const dateOptions = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
-	const timeOptions = { hour: "2-digit", minute: "2-digit", hour12: true };
+  const dateOptions = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  };
+  const timeOptions = { hour: "2-digit", minute: "2-digit", hour12: true };
 
-	const formattedTime = now.toLocaleTimeString("en-US", timeOptions);
-	const formattedDate = now.toLocaleDateString("en-US", dateOptions);
+  const formattedTime = now.toLocaleTimeString("en-US", timeOptions);
+  const formattedDate = now.toLocaleDateString("en-US", dateOptions);
 
-	currentTimeElement.textContent = formattedTime;
-	currentDateElement.textContent = formattedDate;
+  currentTimeElement.textContent = formattedTime;
+  currentDateElement.textContent = formattedDate;
 }
 
 async function displayRandomQuote() {
-	const quoteTextElement = document.getElementById("quote-text");
-	const quoteAuthorElement = document.getElementById("quote-author");
+  const quoteTextElement = document.getElementById("quote-text");
+  const quoteAuthorElement = document.getElementById("quote-author");
 
-	quoteTextElement.style.opacity = 0;
-	quoteAuthorElement.style.opacity = 0;
+  quoteTextElement.style.opacity = 0;
+  quoteAuthorElement.style.opacity = 0;
 
-	try {
-		const response = await fetch("http://api.quotable.io/quotes/random?tags=inspirational|motivational|productivity|education|wisdom|success|work");
-		const data = await response.json();
+  try {
+    const response = await fetch(
+      "http://api.quotable.io/quotes/random?tags=inspirational|motivational|productivity|education|wisdom|success|work",
+    );
+    const data = await response.json();
 
-		const quote = {
-			content: data[0].content,
-			author: data[0].author,
-		};
-		displayQuote(quote);
-	} catch (error) {
-		const fallbackIndex = Math.floor(Math.random() * fallbackMotivationalQuotes.length);
-		const fallbackQuote = fallbackMotivationalQuotes[fallbackIndex];
-		displayQuote(fallbackQuote);
-	}
+    const quote = {
+      content: data[0].content,
+      author: data[0].author,
+    };
+    displayQuote(quote);
+  } catch (error) {
+    const fallbackIndex = Math.floor(
+      Math.random() * fallbackMotivationalQuotes.length,
+    );
+    const fallbackQuote = fallbackMotivationalQuotes[fallbackIndex];
+    displayQuote(fallbackQuote);
+  }
 
-	function displayQuote(q) {
-		setTimeout(() => {
-			quoteTextElement.textContent = `"${q.content}"`;
-			quoteAuthorElement.textContent = `— ${q.author}`;
-			quoteTextElement.style.opacity = 1;
-			quoteAuthorElement.style.opacity = 1;
-		}, 300);
-	}
+  function displayQuote(q) {
+    setTimeout(() => {
+      quoteTextElement.textContent = `"${q.content}"`;
+      quoteAuthorElement.textContent = `— ${q.author}`;
+      quoteTextElement.style.opacity = 1;
+      quoteAuthorElement.style.opacity = 1;
+    }, 300);
+  }
 }
 
 async function setBackground() {
-	const backgroundElement = document.querySelector(".background");
-	if (!backgroundElement) return;
+  const backgroundElement = document.querySelector(".background");
+  if (!backgroundElement) return;
 
-	backgroundElement.style.opacity = 0;
-	document.documentElement.style.setProperty("--bg-brightness", backgroundBrightness);
+  backgroundElement.style.opacity = 0;
+  document.documentElement.style.setProperty(
+    "--bg-brightness",
+    backgroundBrightness,
+  );
 
-	if (!browser) {
-		return handleDefaultBackground();
-	}
+  if (!browser) {
+    return handleDefaultBackground();
+  }
 
-	try {
-		const { wallpaperIndex, wallpaperRotationPaused: paused } = await browser.storage.sync.get(["wallpaperIndex", "wallpaperRotationPaused"]);
+  try {
+    const uploadedWallpaperRecord = await getUploadedWallpaperRecord();
+    hasUploadedWallpaper = Boolean(uploadedWallpaperRecord?.blob);
 
-		if (paused !== undefined) {
-			wallpaperRotationPaused = paused;
-			updatePauseButtonIcon();
-		}
+    if (hasUploadedWallpaper) {
+      const localWallpaperUrl = URL.createObjectURL(
+        uploadedWallpaperRecord.blob,
+      );
+      return preloadAndSetBackground(localWallpaperUrl, {
+        isLocalWallpaper: true,
+        sourceLabel: uploadedWallpaperRecord.name || "Uploaded wallpaper",
+      });
+    }
 
-		if (customWallpaper) {
-			return preloadAndSetBackground(customWallpaper);
-		}
+    const { wallpaperIndex, wallpaperRotationPaused: paused } =
+      await browser.storage.sync.get([
+        "wallpaperIndex",
+        "wallpaperRotationPaused",
+      ]);
 
-		await loadWallpapers();
+    if (paused !== undefined) {
+      wallpaperRotationPaused = paused;
+      updatePauseButtonIcon();
+    }
 
-		if (wallpaperRotationPaused && wallpaperIndex !== undefined && wallpapersList[wallpaperIndex]) {
-			currentWallpaperIndex = wallpaperIndex;
-			preloadAndSetBackground(wallpapersList[currentWallpaperIndex]);
-		} else {
-			changeWallpaper("random");
-		}
-	} catch (err) {
-		console.warn("Failed to restore wallpaper state:", err);
-		handleDefaultBackground();
-	}
+    if (customWallpaper) {
+      return preloadAndSetBackground(customWallpaper);
+    }
+
+    await loadWallpapers();
+
+    if (
+      wallpaperRotationPaused &&
+      wallpaperIndex !== undefined &&
+      wallpapersList[wallpaperIndex]
+    ) {
+      currentWallpaperIndex = wallpaperIndex;
+      preloadAndSetBackground(wallpapersList[currentWallpaperIndex]);
+    } else {
+      changeWallpaper("random");
+    }
+  } catch (err) {
+    console.warn("Failed to restore wallpaper state:", err);
+    handleDefaultBackground();
+  }
 }
 
 async function handleDefaultBackground() {
-	if (customWallpaper) {
-		preloadAndSetBackground(customWallpaper);
-		return;
-	}
+  if (customWallpaper) {
+    preloadAndSetBackground(customWallpaper);
+    return;
+  }
 
-	await loadWallpapers();
-	changeWallpaper("random");
+  await loadWallpapers();
+  changeWallpaper("random");
 }
 
-function preloadAndSetBackground(url) {
-	const backgroundElement = document.querySelector(".background");
-	const img = new Image();
+function preloadAndSetBackground(url, options = {}) {
+  const backgroundElement = document.querySelector(".background");
+  const img = new Image();
+  const isLocalWallpaper = Boolean(options.isLocalWallpaper);
+  const previousUploadedWallpaperObjectUrl = uploadedWallpaperObjectUrl;
 
-	let currentWallpaperUrl = "";
+  img.src = url;
+  img.onload = () => {
+    setTimeout(() => {
+      backgroundElement.style.backgroundImage = `url(${url})`;
+      backgroundElement.style.opacity = 1;
 
-	img.src = url;
-	img.onload = () => {
-		setTimeout(() => {
-			backgroundElement.style.backgroundImage = `url(${url})`;
-			backgroundElement.style.opacity = 1;
+      if (isLocalWallpaper) {
+        uploadedWallpaperObjectUrl = url;
 
-			currentWallpaperUrl = url;
-			updateWallpaperInfoButton(url);
-		}, 500);
-	};
+        if (
+          previousUploadedWallpaperObjectUrl &&
+          previousUploadedWallpaperObjectUrl !== url
+        ) {
+          URL.revokeObjectURL(previousUploadedWallpaperObjectUrl);
+        }
+      } else if (uploadedWallpaperObjectUrl) {
+        URL.revokeObjectURL(uploadedWallpaperObjectUrl);
+        uploadedWallpaperObjectUrl = "";
+      }
 
-	img.onerror = () => {
-		console.error("Failed To Preload Image :", url);
-	};
+      updateWallpaperInfoButton(url, isLocalWallpaper, options.sourceLabel);
+    }, 500);
+  };
+
+  img.onerror = () => {
+    if (isLocalWallpaper) {
+      URL.revokeObjectURL(url);
+    }
+
+    console.error("Failed To Preload Image :", url);
+  };
 }
 
 async function loadWallpapers() {
-	if (Array.isArray(wallpapersList) && wallpapersList.length > 0) {
-		return;
-	}
+  if (Array.isArray(wallpapersList) && wallpapersList.length > 0) {
+    return;
+  }
 
-	if (!browser.storage || !browser.storage.sync) {
-		return;
-	}
+  if (!browser.storage || !browser.storage.sync) {
+    return;
+  }
 
-	try {
-		const storedData = await browser.storage.sync.get("wallpapers");
-		const images = storedData.wallpapers || [];
+  try {
+    const storedData = await browser.storage.sync.get("wallpapers");
+    const images = storedData.wallpapers || [];
 
-		if (Array.isArray(images) && images.length > 0) {
-			wallpapersList = images;
-		} else {
-			console.warn("No Images Found In Data Using Fallback");
-			wallpapersList = backgrounds;
-		}
-	} catch (error) {
-		console.warn("Failed To Load Backgrounds. Using Fallback.", error);
-		wallpapersList = backgrounds;
-	}
+    if (Array.isArray(images) && images.length > 0) {
+      wallpapersList = images;
+    } else {
+      console.warn("No Images Found In Data Using Fallback");
+      wallpapersList = backgrounds;
+    }
+  } catch (error) {
+    console.warn("Failed To Load Backgrounds. Using Fallback.", error);
+    wallpapersList = backgrounds;
+  }
 }
 
 function changeWallpaper(direction) {
-	if (wallpapersList.length === 0) return;
+  if (hasUploadedWallpaper || wallpapersList.length === 0) return;
 
-	const backgroundElement = document.querySelector(".background");
-	if (!backgroundElement) return;
+  const backgroundElement = document.querySelector(".background");
+  if (!backgroundElement) return;
 
-	backgroundElement.style.opacity = 0;
+  backgroundElement.style.opacity = 0;
 
-	if (direction === "next") {
-		currentWallpaperIndex = (currentWallpaperIndex + 1) % wallpapersList.length;
-	} else if (direction === "prev") {
-		currentWallpaperIndex = (currentWallpaperIndex - 1 + wallpapersList.length) % wallpapersList.length;
-	} else {
-		let newIndex;
-		do {
-			newIndex = Math.floor(Math.random() * wallpapersList.length);
-		} while (wallpapersList.length > 1 && newIndex === currentWallpaperIndex);
-		currentWallpaperIndex = newIndex;
-	}
+  if (direction === "next") {
+    currentWallpaperIndex = (currentWallpaperIndex + 1) % wallpapersList.length;
+  } else if (direction === "prev") {
+    currentWallpaperIndex =
+      (currentWallpaperIndex - 1 + wallpapersList.length) %
+      wallpapersList.length;
+  } else {
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * wallpapersList.length);
+    } while (wallpapersList.length > 1 && newIndex === currentWallpaperIndex);
+    currentWallpaperIndex = newIndex;
+  }
 
-	if (browser && wallpaperRotationPaused) {
-		browser.storage.sync.set({ wallpaperIndex: currentWallpaperIndex });
-	}
+  if (browser && wallpaperRotationPaused) {
+    browser.storage.sync.set({ wallpaperIndex: currentWallpaperIndex });
+  }
 
-	const url = wallpapersList[currentWallpaperIndex];
-	preloadAndSetBackground(url);
+  const url = wallpapersList[currentWallpaperIndex];
+  preloadAndSetBackground(url);
 }
 
 async function loadExamDates() {
-	const { countdowns } = await browser.storage.sync.get("countdowns");
+  const { countdowns } = await browser.storage.sync.get("countdowns");
 
-	if (!countdowns) throw new Error("Countdowns not found in storage.");
+  if (!countdowns) throw new Error("Countdowns not found in storage.");
 
-	window.jeeExamDate = new Date(countdowns.jee.date);
-	window.neetExamDate = new Date(countdowns.neet.date);
-	window.jeeAdvExamDate = new Date(countdowns.jeeAdv.date);
+  window.jeeExamDate = new Date(countdowns.jee.date);
+  window.neetExamDate = new Date(countdowns.neet.date);
+  window.jeeAdvExamDate = new Date(countdowns.jeeAdv.date);
 }
 
 async function updateCountdown() {
-	const countdownDaysElement = document.getElementById("countdown-days");
-	const countdownHoursElement = document.getElementById("countdown-hours");
-	const countdownMonthsElement = document.getElementById("countdown-months");
-	const countdownMinutesElement = document.getElementById("countdown-minutes");
-	const countdownSecondsElement = document.getElementById("countdown-seconds");
-	const countdownLabelElement = document.getElementById("countdown-label");
-	const examBadgeElement = document.getElementById("exam-badge");
-	const toggleSeconds = document.getElementById("toggle-seconds");
-	const showSeconds = toggleSeconds ? toggleSeconds.checked : true;
+  const countdownDaysElement = document.getElementById("countdown-days");
+  const countdownHoursElement = document.getElementById("countdown-hours");
+  const countdownMonthsElement = document.getElementById("countdown-months");
+  const countdownMinutesElement = document.getElementById("countdown-minutes");
+  const countdownSecondsElement = document.getElementById("countdown-seconds");
+  const countdownLabelElement = document.getElementById("countdown-label");
+  const examBadgeElement = document.getElementById("exam-badge");
+  const toggleSeconds = document.getElementById("toggle-seconds");
+  const showSeconds = toggleSeconds ? toggleSeconds.checked : true;
 
-	let timeRemaining;
-	let examName;
+  let timeRemaining;
+  let examName;
 
-	const storedData = await browser.storage.sync.get(["countdowns"]);
+  const storedData = await browser.storage.sync.get(["countdowns"]);
 
-	let jeeExamDate = new Date(2026, 0, 29); // default fallback
-	let neetExamDate = new Date(2026, 4, 4);
-	let jeeAdvExamDate = new Date(2026, 4, 18);
+  let jeeExamDate = new Date(2026, 0, 29); // default fallback
+  let neetExamDate = new Date(2026, 4, 4);
+  let jeeAdvExamDate = new Date(2026, 4, 18);
 
-	if (storedData.countdowns) {
-		if (storedData.countdowns.jee?.date) {
-			jeeExamDate = new Date(storedData.countdowns.jee.date);
-		}
-		if (storedData.countdowns.neet?.date) {
-			neetExamDate = new Date(storedData.countdowns.neet.date);
-		}
-		if (storedData.countdowns.jeeAdv?.date) {
-			jeeAdvExamDate = new Date(storedData.countdowns.jeeAdv.date);
-		}
-	}
+  if (storedData.countdowns) {
+    if (storedData.countdowns.jee?.date) {
+      jeeExamDate = new Date(storedData.countdowns.jee.date);
+    }
+    if (storedData.countdowns.neet?.date) {
+      neetExamDate = new Date(storedData.countdowns.neet.date);
+    }
+    if (storedData.countdowns.jeeAdv?.date) {
+      jeeAdvExamDate = new Date(storedData.countdowns.jeeAdv.date);
+    }
+  }
 
-	switch (currentExam) {
-		case "jee":
-			timeRemaining = getTimeRemaining(jeeExamDate, showSeconds);
-			examName = "JEE Main";
-			break;
-		case "neet":
-			timeRemaining = getTimeRemaining(neetExamDate, showSeconds);
-			examName = "NEET";
-			break;
-		case "jeeAdv":
-			timeRemaining = getTimeRemaining(jeeAdvExamDate, showSeconds);
-			examName = "JEE Advanced";
-			break;
-		case "custom":
-			if (hasValidCustomExam()) {
-				const customExam = getCustomExamData();
-				timeRemaining = getTimeRemaining(customExam.date, showSeconds);
-				examName = customExam.name;
-			} else {
-				timeRemaining = { total: 0, month: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
-				examName = "Custom Exam";
-			}
-			break;
-	}
+  switch (currentExam) {
+    case "jee":
+      timeRemaining = getTimeRemaining(jeeExamDate, showSeconds);
+      examName = "JEE Main";
+      break;
+    case "neet":
+      timeRemaining = getTimeRemaining(neetExamDate, showSeconds);
+      examName = "NEET";
+      break;
+    case "jeeAdv":
+      timeRemaining = getTimeRemaining(jeeAdvExamDate, showSeconds);
+      examName = "JEE Advanced";
+      break;
+    case "custom":
+      if (hasValidCustomExam()) {
+        const customExam = getCustomExamData();
+        timeRemaining = getTimeRemaining(customExam.date, showSeconds);
+        examName = customExam.name;
+      } else {
+        timeRemaining = {
+          total: 0,
+          month: 0,
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+        };
+        examName = "Custom Exam";
+      }
+      break;
+  }
 
-	if (examBadgeElement) {
-		examBadgeElement.textContent = examName;
-	}
+  if (examBadgeElement) {
+    examBadgeElement.textContent = examName;
+  }
 
-	if (timeRemaining.total <= 0) {
-		countdownMonthsElement.style = "--value:0";
-		countdownDaysElement.style = "--value:0";
-		countdownHoursElement.style = "--value:0";
-		countdownMinutesElement.style = "--value:0";
-		countdownSecondsElement.style = "--value:0";
-		countdownLabelElement.textContent = `${examName} Exam Day Has Arrived!`;
-	} else {
-		countdownMonthsElement.style = `--value:${timeRemaining.month}`;
-		countdownDaysElement.style = `--value:${timeRemaining.days}`;
-		countdownHoursElement.style = `--value:${timeRemaining.hours}`;
-		countdownMinutesElement.style = `--value:${timeRemaining.minutes}`;
-		countdownSecondsElement.style = `--value:${timeRemaining.seconds}`;
-		countdownLabelElement.textContent = "";
-	}
+  if (timeRemaining.total <= 0) {
+    countdownMonthsElement.style = "--value:0";
+    countdownDaysElement.style = "--value:0";
+    countdownHoursElement.style = "--value:0";
+    countdownMinutesElement.style = "--value:0";
+    countdownSecondsElement.style = "--value:0";
+    countdownLabelElement.textContent = `${examName} Exam Day Has Arrived!`;
+  } else {
+    countdownMonthsElement.style = `--value:${timeRemaining.month}`;
+    countdownDaysElement.style = `--value:${timeRemaining.days}`;
+    countdownHoursElement.style = `--value:${timeRemaining.hours}`;
+    countdownMinutesElement.style = `--value:${timeRemaining.minutes}`;
+    countdownSecondsElement.style = `--value:${timeRemaining.seconds}`;
+    countdownLabelElement.textContent = "";
+  }
 }
 
-function updateWallpaperInfoButton(wallpaperUrl) {
-	const infoButton = document.getElementById("wallpaper-info-btn");
-	let sourceUrl = "";
+function updateWallpaperInfoButton(
+  wallpaperUrl,
+  isLocalWallpaper = false,
+  sourceLabel = "",
+) {
+  const infoButton = document.getElementById("wallpaper-info-btn");
+  let sourceUrl = "";
 
-	if (!infoButton) return;
+  if (!infoButton) return;
 
-	try {
-		sourceUrl = new URL(wallpaperUrl);
-		console.log(sourceUrl);
-	} catch (e) {
-		console.error("Invalid wallpaper URL:", e);
-		sourceUrl = "https://novatra.in";
-	}
+  if (isLocalWallpaper) {
+    infoButton.href = "#";
+    infoButton.removeAttribute("target");
+    infoButton.title = sourceLabel || "Local uploaded wallpaper";
+    return;
+  }
 
-	infoButton.href = sourceUrl;
+  try {
+    sourceUrl = new URL(wallpaperUrl);
+    infoButton.target = "_blank";
+    infoButton.title = "See Source Image";
+  } catch (e) {
+    console.error("Invalid wallpaper URL:", e);
+    sourceUrl = "https://novatra.in";
+  }
+
+  infoButton.href = sourceUrl;
 }
 
 async function updateExamDropdownLabels({ customExam }) {
-	const examSelector = document.getElementById("exam-selector");
-	const format = (date) =>
-		date.toLocaleDateString("en-US", {
-			day: "numeric",
-			month: "short",
-			year: "numeric",
-		});
+  const examSelector = document.getElementById("exam-selector");
+  const format = (date) =>
+    date.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
 
-	const { countdowns } = await browser.storage.sync.get("countdowns");
+  const { countdowns } = await browser.storage.sync.get("countdowns");
 
-	const jeeExamDate = countdowns?.jee?.date ? new Date(countdowns.jee.date) : new Date(2026, 0, 29);
-	const neetExamDate = countdowns?.neet?.date ? new Date(countdowns.neet.date) : new Date(2026, 4, 4);
-	const jeeAdvExamDate = countdowns?.jeeAdv?.date ? new Date(countdowns.jeeAdv.date) : new Date(2026, 4, 18);
+  const jeeExamDate = countdowns?.jee?.date
+    ? new Date(countdowns.jee.date)
+    : new Date(2026, 0, 29);
+  const neetExamDate = countdowns?.neet?.date
+    ? new Date(countdowns.neet.date)
+    : new Date(2026, 4, 4);
+  const jeeAdvExamDate = countdowns?.jeeAdv?.date
+    ? new Date(countdowns.jeeAdv.date)
+    : new Date(2026, 4, 18);
 
-	const labelMap = {
-		neet: `NEET (${format(neetExamDate)})`,
-		jee: `JEE Main (${format(jeeExamDate)})`,
-		jeeAdv: `JEE Advanced (${format(jeeAdvExamDate)})`,
-		custom: customExam && customExam.name && customExam.date instanceof Date ? `${customExam.name} (${format(customExam.date)})` : "Custom Exam",
-	};
+  const labelMap = {
+    neet: `NEET (${format(neetExamDate)})`,
+    jee: `JEE Main (${format(jeeExamDate)})`,
+    jeeAdv: `JEE Advanced (${format(jeeAdvExamDate)})`,
+    custom:
+      customExam && customExam.name && customExam.date instanceof Date
+        ? `${customExam.name} (${format(customExam.date)})`
+        : "Custom Exam",
+  };
 
-	for (const option of examSelector.options) {
-		const value = option.value;
-		if (labelMap[value]) {
-			option.textContent = labelMap[value];
-		}
-	}
+  for (const option of examSelector.options) {
+    const value = option.value;
+    if (labelMap[value]) {
+      option.textContent = labelMap[value];
+    }
+  }
 }
 
 function setupEventListeners() {
-	const optionsLink = document.getElementById("options-link");
-	const themeToggle = document.getElementById("theme-toggle");
-	const musicBtn = document.getElementById("music-btn");
+  const optionsLink = document.getElementById("options-link");
+  const themeToggle = document.getElementById("theme-toggle");
+  const musicBtn = document.getElementById("music-btn");
 
-	const optionsModal = document.getElementById("options-modal");
-	const preferencesForm = document.getElementById("preferences-form");
+  const optionsModal = document.getElementById("options-modal");
+  const preferencesForm = document.getElementById("preferences-form");
 
-	const examSelector = document.getElementById("exam-selector");
-	const customExam = getCustomExamData();
+  const examSelector = document.getElementById("exam-selector");
+  const customExam = getCustomExamData();
 
-	const customExamSection = document.getElementById("custom-exam-section");
-	const customExamNameInput = document.getElementById("custom-exam-name");
-	const customExamDateInput = document.getElementById("custom-exam-date");
+  const customExamSection = document.getElementById("custom-exam-section");
+  const customExamNameInput = document.getElementById("custom-exam-name");
+  const customExamDateInput = document.getElementById("custom-exam-date");
 
-	const customWallpaperInput = document.getElementById("custom-wallpaper");
-	const brightnessSlider = document.getElementById("brightness-slider");
+  const customWallpaperInput = document.getElementById("custom-wallpaper");
+  const localWallpaperUploadInput = document.getElementById(
+    "local-wallpaper-upload",
+  );
+  const uploadedWallpaperStatus = document.getElementById(
+    "uploaded-wallpaper-status",
+  );
+  const removeUploadedWallpaperBtn = document.getElementById(
+    "remove-uploaded-wallpaper",
+  );
+  const brightnessSlider = document.getElementById("brightness-slider");
 
-	const toggleDateTime = document.getElementById("toggle-datetime");
-	const toggleCountdown = document.getElementById("toggle-countdown");
-	const toggleQuote = document.getElementById("toggle-quote");
-	const toggleSeconds = document.getElementById("toggle-seconds");
-	const toggleBrand = document.getElementById("toggle-brand");
+  const toggleDateTime = document.getElementById("toggle-datetime");
+  const toggleCountdown = document.getElementById("toggle-countdown");
+  const toggleQuote = document.getElementById("toggle-quote");
+  const toggleSeconds = document.getElementById("toggle-seconds");
+  const toggleBrand = document.getElementById("toggle-brand");
 
-	const saveMessage = document.getElementById("save-message");
+  const saveMessage = document.getElementById("save-message");
 
-	const nextWallpaperBtn = document.getElementById("next-wallpaper");
-	const prevWallpaperBtn = document.getElementById("prev-wallpaper");
-	const pauseWallpaperBtn = document.getElementById("pause-wallpaper");
+  const nextWallpaperBtn = document.getElementById("next-wallpaper");
+  const prevWallpaperBtn = document.getElementById("prev-wallpaper");
+  const pauseWallpaperBtn = document.getElementById("pause-wallpaper");
 
-	function formatDateToLocalInputString(date) {
-	    if (!date || isNaN(date.getTime())) return "";
+  function formatDateToLocalInputString(date) {
+    if (!date || isNaN(date.getTime())) return "";
 
-	    const pad = (num) => num.toString().padStart(2, '0');
+    const pad = (num) => num.toString().padStart(2, "0");
 
-	    const year = date.getFullYear();
-	    const month = pad(date.getMonth() + 1); // getMonth() is 0-indexed
-	    const day = pad(date.getDate());
-	    const hours = pad(date.getHours());
-	    const minutes = pad(date.getMinutes());
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1); // getMonth() is 0-indexed
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
 
-	    return `${year}-${month}-${day}T${hours}:${minutes}`;
-	}
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
 
-	function getCurrentLocalDatetimeString() {
-		const now = new Date();
-		
-		const pad = (num) => num.toString().padStart(2, '0');
+  function getCurrentLocalDatetimeString() {
+    const now = new Date();
 
-		const year = now.getFullYear();
-		const month = pad(now.getMonth() + 1); // getMonth() is 0-indexed
-		const day = pad(now.getDate());
-		const hours = pad(now.getHours());
-		const minutes = pad(now.getMinutes());
+    const pad = (num) => num.toString().padStart(2, "0");
 
-		return `${year}-${month}-${day}T${hours}:${minutes}`;
-	}
+    const year = now.getFullYear();
+    const month = pad(now.getMonth() + 1); // getMonth() is 0-indexed
+    const day = pad(now.getDate());
+    const hours = pad(now.getHours());
+    const minutes = pad(now.getMinutes());
 
-	const showOptionsModal = function () {
-		browser.storage.sync.get().then((data) => {
-			const activeExam = data.activeExam || "jeeAdv";
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
 
-			examSelector.value = activeExam;
+  const showOptionsModal = function () {
+    browser.storage.sync.get().then((data) => {
+      const activeExam = data.activeExam || "jeeAdv";
 
-			if (data.customWallpaper) {
-				customWallpaperInput.value = data.customWallpaper;
-			} else {
-				customWallpaperInput.value = "";
-			}
+      examSelector.value = activeExam;
 
-			if (data.backgroundBrightness !== undefined) {
-				brightnessSlider.value = data.backgroundBrightness;
-			} else {
-				brightnessSlider.value = 0.4;
-			}
-			const customExam = getCustomExamData();
-			const minTime = getCurrentLocalDatetimeString();
-			customExamDateInput.min = minTime;
+      if (data.customWallpaper) {
+        customWallpaperInput.value = data.customWallpaper;
+      } else {
+        customWallpaperInput.value = "";
+      }
 
-			if (customExam.name) {
-				customExamNameInput.value = customExam.name;
-			} else {
-				customExamNameInput.value = "";
-			}
+      if (data.backgroundBrightness !== undefined) {
+        brightnessSlider.value = data.backgroundBrightness;
+      } else {
+        brightnessSlider.value = 0.4;
+      }
 
-			if (hasValidCustomExam()) {
-				customExamDateInput.value = formatDateToLocalInputString(customExam.date);
+      updateUploadedWallpaperStatus(
+        uploadedWallpaperStatus,
+        removeUploadedWallpaperBtn,
+      );
 
-				const customExamStat = document.getElementById("custom-exam-stat");
-				const customExamStatTitle = document.getElementById("custom-exam-stat-title");
-				const customExamStatDate = document.getElementById("custom-exam-stat-date");
+      const customExam = getCustomExamData();
+      const minTime = getCurrentLocalDatetimeString();
+      customExamDateInput.min = minTime;
 
-				if (customExamStat && customExamStatTitle && customExamStatDate) {
-					customExamStat.classList.remove("hidden");
-					customExamStatTitle.textContent = customExam.name;
-					customExamStatDate.textContent = customExam.date.toLocaleDateString("en-US", { 
-						year: "numeric", 
-						month: "long", 
-						day: "numeric",
-						hour: "numeric",   
-						minute: "2-digit"  
-					});
-				}
-			} else {
-				customExamDateInput.value = "";
+      if (customExam.name) {
+        customExamNameInput.value = customExam.name;
+      } else {
+        customExamNameInput.value = "";
+      }
 
-				const customExamStat = document.getElementById("custom-exam-stat");
-				if (customExamStat) {
-					customExamStat.classList.add("hidden");
-				}
-			}
+      if (hasValidCustomExam()) {
+        customExamDateInput.value = formatDateToLocalInputString(
+          customExam.date,
+        );
 
-			if (activeExam === "custom") {
-				customExamSection.classList.remove("hidden");
-			} else {
-				customExamSection.classList.add("hidden");
-			}
+        const customExamStat = document.getElementById("custom-exam-stat");
+        const customExamStatTitle = document.getElementById(
+          "custom-exam-stat-title",
+        );
+        const customExamStatDate = document.getElementById(
+          "custom-exam-stat-date",
+        );
 
-			updateExamDropdownLabels({
-				customExam,
-			});
+        if (customExamStat && customExamStatTitle && customExamStatDate) {
+          customExamStat.classList.remove("hidden");
+          customExamStatTitle.textContent = customExam.name;
+          customExamStatDate.textContent = customExam.date.toLocaleDateString(
+            "en-US",
+            {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            },
+          );
+        }
+      } else {
+        customExamDateInput.value = "";
 
-			optionsModal.showModal();
-		});
-	};
+        const customExamStat = document.getElementById("custom-exam-stat");
+        if (customExamStat) {
+          customExamStat.classList.add("hidden");
+        }
+      }
 
-	if (examSelector) {
-		examSelector.addEventListener("change", function () {
-			if (this.value === "custom") {
-				customExamSection.classList.remove("hidden");
-			} else {
-				customExamSection.classList.add("hidden");
-			}
-		});
-	}
+      if (activeExam === "custom") {
+        customExamSection.classList.remove("hidden");
+      } else {
+        customExamSection.classList.add("hidden");
+      }
 
-	if (optionsLink) {
-		optionsLink.addEventListener("click", showOptionsModal);
-	}
-	if (themeToggle) {
-		themeToggle.addEventListener("click", function () {
-			document.documentElement.dataset.theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      updateExamDropdownLabels({
+        customExam,
+      });
 
-			browser.storage.sync.set({ theme: document.documentElement.dataset.theme });
-		});
-	}
+      optionsModal.showModal();
+    });
+  };
 
-	if (nextWallpaperBtn) {
-		nextWallpaperBtn.addEventListener("click", function () {
-			changeWallpaper("next");
-		});
-	}
+  if (examSelector) {
+    examSelector.addEventListener("change", function () {
+      if (this.value === "custom") {
+        customExamSection.classList.remove("hidden");
+      } else {
+        customExamSection.classList.add("hidden");
+      }
+    });
+  }
 
-	if (prevWallpaperBtn) {
-		prevWallpaperBtn.addEventListener("click", function () {
-			changeWallpaper("prev");
-		});
-	}
-	if (pauseWallpaperBtn) {
-		pauseWallpaperBtn.addEventListener("click", function () {
-			wallpaperRotationPaused = !wallpaperRotationPaused;
-			updatePauseButtonIcon();
+  if (optionsLink) {
+    optionsLink.addEventListener("click", showOptionsModal);
+  }
+  if (themeToggle) {
+    themeToggle.addEventListener("click", function () {
+      document.documentElement.dataset.theme =
+        document.documentElement.dataset.theme === "dark" ? "light" : "dark";
 
-			if (browser) {
-				if (wallpaperRotationPaused) {
-					browser.storage.sync.set({
-						wallpaperRotationPaused,
-						wallpaperIndex: currentWallpaperIndex,
-					});
-				} else {
-					browser.storage.sync.set({ wallpaperRotationPaused });
-				}
-			}
-		});
-	}
+      browser.storage.sync.set({
+        theme: document.documentElement.dataset.theme,
+      });
+    });
+  }
 
-	if (musicBtn) {
-		const musicModal = document.getElementById("music-modal");
-		const youtubeForm = document.getElementById("youtube-form");
-		const youtubeUrlInput = document.getElementById("youtube-url");
-		const youtubeEmbed = document.getElementById("youtube-embed");
+  if (nextWallpaperBtn) {
+    nextWallpaperBtn.addEventListener("click", function () {
+      changeWallpaper("next");
+    });
+  }
 
-		const defaultYoutubeUrl = "https://www.youtube.com/watch?v=n61ULEU7CO0";
-		musicBtn.addEventListener("click", function () {
-			musicModal.showModal();
+  if (prevWallpaperBtn) {
+    prevWallpaperBtn.addEventListener("click", function () {
+      changeWallpaper("prev");
+    });
+  }
+  if (pauseWallpaperBtn) {
+    pauseWallpaperBtn.addEventListener("click", function () {
+      wallpaperRotationPaused = !wallpaperRotationPaused;
+      updatePauseButtonIcon();
 
-			if (browser) {
-				browser.storage.sync.get(["youtubeUrl"]).then((data) => {
-					if (data.youtubeUrl) {
-						youtubeUrlInput.value = data.youtubeUrl;
-						if (youtubeEmbed.innerHTML === "") {
-							loadMusicEmbed(data.youtubeUrl);
-						}
-					} else {
-						youtubeUrlInput.value = defaultYoutubeUrl;
-						if (youtubeEmbed.innerHTML === "") {
-							loadMusicEmbed(defaultYoutubeUrl);
-						}
-					}
-				});
-			} else {
-				youtubeUrlInput.value = defaultYoutubeUrl;
-				if (youtubeEmbed.innerHTML === "") {
-					loadMusicEmbed(defaultYoutubeUrl);
-				}
-			}
-		});
-		if (youtubeForm) {
-			youtubeForm.addEventListener("submit", function (event) {
-				event.preventDefault();
-				const musicUrl = youtubeUrlInput.value.trim();
-				if (musicUrl) {
-					if (browser.storage) {
-						browser.storage.sync.set({ youtubeUrl: musicUrl });
-					}
-					loadMusicEmbed(musicUrl);
-				}
-			});
-		}
+      if (browser) {
+        if (wallpaperRotationPaused) {
+          browser.storage.sync.set({
+            wallpaperRotationPaused,
+            wallpaperIndex: currentWallpaperIndex,
+          });
+        } else {
+          browser.storage.sync.set({ wallpaperRotationPaused });
+        }
+      }
+    });
+  }
 
-		function loadMusicEmbed(url) {
-			const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-			const youtubeMatch = url.match(youtubeRegex);
+  if (localWallpaperUploadInput) {
+    localWallpaperUploadInput.addEventListener(
+      "change",
+      async function (event) {
+        const file = event.target.files?.[0];
 
-			if (youtubeMatch && youtubeMatch[1]) {
-				youtubeEmbed.classList.remove("hidden");
+        if (!file) return;
 
-				const videoId = youtubeMatch[1];
-				const embedUrl = `https://novatrax.github.io/yt-embed-proxy/?v=${videoId}`;
+        if (!file.type.startsWith("image/")) {
+          saveMessage.textContent = "Please select a valid image file";
+          saveMessage.style.color = "red";
+          this.value = "";
+          return;
+        }
 
-				while (youtubeEmbed.firstChild) {
-					youtubeEmbed.removeChild(youtubeEmbed.firstChild);
-				}
-				const iframe = document.createElement("iframe");
-				iframe.width = "100%";
-				iframe.height = "100%";
-				iframe.src = embedUrl;
-				iframe.title = "YouTube video player";
-				iframe.style.border = "none";
-				iframe.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope");
-				iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-				youtubeEmbed.appendChild(iframe);
-			} else {
-				youtubeEmbed.classList.remove("hidden");
+        try {
+          saveMessage.textContent = "Processing wallpaper...";
+          saveMessage.style.color = "";
 
-				while (youtubeEmbed.firstChild) {
-					youtubeEmbed.removeChild(youtubeEmbed.firstChild);
-				}
-				const errorParagraph = document.createElement("p");
-				errorParagraph.className = "text-center py-4";
-				errorParagraph.textContent = "Invalid YouTube URL";
-				youtubeEmbed.appendChild(errorParagraph);
-			}
-		}
-	}
-	if (preferencesForm) {
-		preferencesForm.addEventListener("submit", function (event) {
-			event.preventDefault();
+          const compressedWallpaper = await compressWallpaperFile(file);
+          await saveUploadedWallpaperBlob(compressedWallpaper, file.name);
 
-			let activeExam = examSelector.value;
-			let wallpaperUrl = customWallpaperInput.value.trim();
-			let brightness = parseFloat(brightnessSlider.value);
+          hasUploadedWallpaper = true;
+          customWallpaper = "";
 
-			let showDateTime = toggleDateTime ? toggleDateTime.checked : true;
-			let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
-			let showQuote = toggleQuote ? toggleQuote.checked : true;
-			let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
-			let showBrand = toggleBrand ? toggleBrand.checked : true;
+          if (customWallpaperInput) {
+            customWallpaperInput.value = "";
+          }
 
-			let customName = "";
-			let customDate = null;
+          if (browser?.storage?.sync) {
+            await browser.storage.sync.set({ customWallpaper: "" });
+          }
 
-			if (activeExam === "custom") {
-				customName = customExamNameInput.value.trim();
+          await updateUploadedWallpaperStatus(
+            uploadedWallpaperStatus,
+            removeUploadedWallpaperBtn,
+          );
+          await setBackground();
 
-				if (!customName) {
-					customName = "Custom Exam";
-				}
+          saveMessage.textContent = "Wallpaper uploaded!";
+          saveMessage.style.color = "";
 
-				if (customExamDateInput.value) {
-					customDate = new Date(customExamDateInput.value);
-				}
+          setTimeout(function () {
+            saveMessage.textContent = "";
+          }, 3000);
+        } catch (error) {
+          console.error("Failed to upload wallpaper:", error);
+          saveMessage.textContent =
+            error.message || "Failed to upload wallpaper";
+          saveMessage.style.color = "red";
+        } finally {
+          this.value = "";
+        }
+      },
+    );
+  }
 
-				if (!customDate || isNaN(customDate.getTime())) {
-					saveMessage.textContent = "Please enter a valid date for your custom exam";
-					saveMessage.style.color = "red";
-					setTimeout(function () {
-						saveMessage.textContent = "";
-						saveMessage.style.color = "";
-					}, 3000);
-					return;
-				}
-			}
-			if (activeExam === "custom" && customDate) {
-				saveCustomExamData(customName, customDate);
-			}
-			const dataToSave = {
-				activeExam: activeExam,
-				customWallpaper: wallpaperUrl,
-				backgroundBrightness: brightness,
-				widgetVisibility: {
-					dateTime: showDateTime,
-					countdown: showCountdown,
-					quote: showQuote,
-					seconds: showSeconds,
-					brand: showBrand,
-				},
-				wallpaperIndex: currentWallpaperIndex,
-				wallpaperRotationPaused: wallpaperRotationPaused,
-			};
+  if (removeUploadedWallpaperBtn) {
+    removeUploadedWallpaperBtn.addEventListener("click", async function () {
+      try {
+        await deleteUploadedWallpaper();
 
-			browser.storage.sync
-				.set(dataToSave)
-				.then(() => {
-					saveMessage.textContent = "Preferences Saved!";
-					saveMessage.style.color = "";
+        hasUploadedWallpaper = false;
 
-					setActiveExam(activeExam);
+        if (uploadedWallpaperObjectUrl) {
+          URL.revokeObjectURL(uploadedWallpaperObjectUrl);
+          uploadedWallpaperObjectUrl = "";
+        }
 
-					customWallpaper = wallpaperUrl;
-					backgroundBrightness = brightness;
-					setBackground();
+        await updateUploadedWallpaperStatus(
+          uploadedWallpaperStatus,
+          removeUploadedWallpaperBtn,
+        );
+        await setBackground();
 
-					updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand);
+        saveMessage.textContent = "Uploaded wallpaper removed";
+        saveMessage.style.color = "";
 
-					setTimeout(function () {
-						saveMessage.textContent = "";
-					}, 3000);
-					optionsModal.close();
-				})
-				.catch((error) => {
-					console.error("Failed to save preferences:", error);
-					saveMessage.textContent = "Failed to save preferences";
-					saveMessage.style.color = "red";
+        setTimeout(function () {
+          saveMessage.textContent = "";
+        }, 3000);
+      } catch (error) {
+        console.error("Failed to remove uploaded wallpaper:", error);
+        saveMessage.textContent = "Failed to remove uploaded wallpaper";
+        saveMessage.style.color = "red";
+      }
+    });
+  }
 
-					setTimeout(function () {
-						saveMessage.textContent = "";
-					}, 3000);
-				});
-		});
-	}
+  if (musicBtn) {
+    const musicModal = document.getElementById("music-modal");
+    const youtubeForm = document.getElementById("youtube-form");
+    const youtubeUrlInput = document.getElementById("youtube-url");
+    const youtubeEmbed = document.getElementById("youtube-embed");
 
-	if (brightnessSlider) {
-		brightnessSlider.addEventListener("input", function () {
-			document.documentElement.style.setProperty("--bg-brightness", this.value);
-		});
-	}
+    const defaultYoutubeUrl = "https://www.youtube.com/watch?v=n61ULEU7CO0";
+    musicBtn.addEventListener("click", function () {
+      musicModal.showModal();
 
-	if (customExamSection) {
-		customExamSection.classList.add("hidden");
-	}
+      if (browser) {
+        browser.storage.sync.get(["youtubeUrl"]).then((data) => {
+          if (data.youtubeUrl) {
+            youtubeUrlInput.value = data.youtubeUrl;
+            if (youtubeEmbed.innerHTML === "") {
+              loadMusicEmbed(data.youtubeUrl);
+            }
+          } else {
+            youtubeUrlInput.value = defaultYoutubeUrl;
+            if (youtubeEmbed.innerHTML === "") {
+              loadMusicEmbed(defaultYoutubeUrl);
+            }
+          }
+        });
+      } else {
+        youtubeUrlInput.value = defaultYoutubeUrl;
+        if (youtubeEmbed.innerHTML === "") {
+          loadMusicEmbed(defaultYoutubeUrl);
+        }
+      }
+    });
+    if (youtubeForm) {
+      youtubeForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const musicUrl = youtubeUrlInput.value.trim();
+        if (musicUrl) {
+          if (browser.storage) {
+            browser.storage.sync.set({ youtubeUrl: musicUrl });
+          }
+          loadMusicEmbed(musicUrl);
+        }
+      });
+    }
+
+    function loadMusicEmbed(url) {
+      const youtubeRegex =
+        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+      const youtubeMatch = url.match(youtubeRegex);
+
+      if (youtubeMatch && youtubeMatch[1]) {
+        youtubeEmbed.classList.remove("hidden");
+
+        const videoId = youtubeMatch[1];
+        const embedUrl = `https://novatrax.github.io/yt-embed-proxy/?v=${videoId}`;
+
+        while (youtubeEmbed.firstChild) {
+          youtubeEmbed.removeChild(youtubeEmbed.firstChild);
+        }
+        const iframe = document.createElement("iframe");
+        iframe.width = "100%";
+        iframe.height = "100%";
+        iframe.src = embedUrl;
+        iframe.title = "YouTube video player";
+        iframe.style.border = "none";
+        iframe.setAttribute(
+          "allow",
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope",
+        );
+        iframe.setAttribute(
+          "referrerpolicy",
+          "strict-origin-when-cross-origin",
+        );
+        youtubeEmbed.appendChild(iframe);
+      } else {
+        youtubeEmbed.classList.remove("hidden");
+
+        while (youtubeEmbed.firstChild) {
+          youtubeEmbed.removeChild(youtubeEmbed.firstChild);
+        }
+        const errorParagraph = document.createElement("p");
+        errorParagraph.className = "text-center py-4";
+        errorParagraph.textContent = "Invalid YouTube URL";
+        youtubeEmbed.appendChild(errorParagraph);
+      }
+    }
+  }
+  if (preferencesForm) {
+    preferencesForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      let activeExam = examSelector.value;
+      let wallpaperUrl = customWallpaperInput.value.trim();
+      let brightness = parseFloat(brightnessSlider.value);
+
+      let showDateTime = toggleDateTime ? toggleDateTime.checked : true;
+      let showCountdown = toggleCountdown ? toggleCountdown.checked : true;
+      let showQuote = toggleQuote ? toggleQuote.checked : true;
+      let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
+      let showBrand = toggleBrand ? toggleBrand.checked : true;
+
+      let customName = "";
+      let customDate = null;
+
+      if (activeExam === "custom") {
+        customName = customExamNameInput.value.trim();
+
+        if (!customName) {
+          customName = "Custom Exam";
+        }
+
+        if (customExamDateInput.value) {
+          customDate = new Date(customExamDateInput.value);
+        }
+
+        if (!customDate || isNaN(customDate.getTime())) {
+          saveMessage.textContent =
+            "Please enter a valid date for your custom exam";
+          saveMessage.style.color = "red";
+          setTimeout(function () {
+            saveMessage.textContent = "";
+            saveMessage.style.color = "";
+          }, 3000);
+          return;
+        }
+      }
+      if (activeExam === "custom" && customDate) {
+        saveCustomExamData(customName, customDate);
+      }
+      const dataToSave = {
+        activeExam: activeExam,
+        customWallpaper: wallpaperUrl,
+        backgroundBrightness: brightness,
+        widgetVisibility: {
+          dateTime: showDateTime,
+          countdown: showCountdown,
+          quote: showQuote,
+          seconds: showSeconds,
+          brand: showBrand,
+        },
+        wallpaperIndex: currentWallpaperIndex,
+        wallpaperRotationPaused: wallpaperRotationPaused,
+      };
+
+      browser.storage.sync
+        .set(dataToSave)
+        .then(() => {
+          saveMessage.textContent = "Preferences Saved!";
+          saveMessage.style.color = "";
+
+          setActiveExam(activeExam);
+
+          customWallpaper = wallpaperUrl;
+          backgroundBrightness = brightness;
+          setBackground();
+
+          updateWidgetVisibility(
+            showDateTime,
+            showCountdown,
+            showQuote,
+            showSeconds,
+            showBrand,
+          );
+
+          setTimeout(function () {
+            saveMessage.textContent = "";
+          }, 3000);
+          optionsModal.close();
+        })
+        .catch((error) => {
+          console.error("Failed to save preferences:", error);
+          saveMessage.textContent = "Failed to save preferences";
+          saveMessage.style.color = "red";
+
+          setTimeout(function () {
+            saveMessage.textContent = "";
+          }, 3000);
+        });
+    });
+  }
+
+  if (brightnessSlider) {
+    brightnessSlider.addEventListener("input", function () {
+      document.documentElement.style.setProperty("--bg-brightness", this.value);
+    });
+  }
+
+  if (customExamSection) {
+    customExamSection.classList.add("hidden");
+  }
 }
 
 async function updateNovatraLink(exam) {
-	const novatraLink = document.getElementById("novatra-link");
-	if (!novatraLink) return;
+  const novatraLink = document.getElementById("novatra-link");
+  if (!novatraLink) return;
 
-	try {
-		const examData = await browser.storage.sync.get("exams");
+  try {
+    const examData = await browser.storage.sync.get("exams");
 
-		if (Array.isArray(examData.exams)) {
-			const examInfo = examData.exams.find((e) => e.name === exam);
+    if (Array.isArray(examData.exams)) {
+      const examInfo = examData.exams.find((e) => e.name === exam);
 
-			novatraLink.href = examInfo ? examInfo.link : "https://novatra.in/";
-		} else {
-			console.error("Exams Data Is Not An Array : ", examData.exams);
-			novatraLink.href = "https://novatra.in/";
-		}
-	} catch (error) {
-		console.error("Error Retrieving Exam Info : ", error);
-		novatraLink.href = "https://novatra.in/";
-	}
+      novatraLink.href = examInfo ? examInfo.link : "https://novatra.in/";
+    } else {
+      console.error("Exams Data Is Not An Array : ", examData.exams);
+      novatraLink.href = "https://novatra.in/";
+    }
+  } catch (error) {
+    console.error("Error Retrieving Exam Info : ", error);
+    novatraLink.href = "https://novatra.in/";
+  }
 }
 
 function setActiveExam(exam) {
-	currentExam = exam;
-	updateCountdown();
-	updateNovatraLink(exam);
+  currentExam = exam;
+  updateCountdown();
+  updateNovatraLink(exam);
 
-	if (browser.storage) {
-		browser.storage.sync.set({ activeExam: exam });
-	}
+  if (browser.storage) {
+    browser.storage.sync.set({ activeExam: exam });
+  }
 }
 
-function updateWidgetVisibility(showDateTime, showCountdown, showQuote, showSeconds, showBrand) {
-	const dateTimeElement = document.getElementById("clock-class");
-	const countdownElement = document.getElementById("countdown-class");
-	const quoteElement = document.getElementById("quote-class");
-	const secondsElement = document.getElementById("seconds-container");
-	const brandElement = document.getElementById("brand-class");
+function updateWidgetVisibility(
+  showDateTime,
+  showCountdown,
+  showQuote,
+  showSeconds,
+  showBrand,
+) {
+  const dateTimeElement = document.getElementById("clock-class");
+  const countdownElement = document.getElementById("countdown-class");
+  const quoteElement = document.getElementById("quote-class");
+  const secondsElement = document.getElementById("seconds-container");
+  const brandElement = document.getElementById("brand-class");
 
-	if (dateTimeElement) {
-		dateTimeElement.style.display = showDateTime ? "" : "none";
-	}
+  if (dateTimeElement) {
+    dateTimeElement.style.display = showDateTime ? "" : "none";
+  }
 
-	if (countdownElement) {
-		countdownElement.style.display = showCountdown ? "" : "none";
-	}
+  if (countdownElement) {
+    countdownElement.style.display = showCountdown ? "" : "none";
+  }
 
-	if (quoteElement) {
-		quoteElement.style.display = showQuote ? "" : "none";
-	}
+  if (quoteElement) {
+    quoteElement.style.display = showQuote ? "" : "none";
+  }
 
-	if (secondsElement) {
-		secondsElement.style.display = showSeconds ? "" : "none";
-	}
+  if (secondsElement) {
+    secondsElement.style.display = showSeconds ? "" : "none";
+  }
 
-	if (brandElement) {
-		brandElement.style.display = showBrand ? "" : "none";
-	}
+  if (brandElement) {
+    brandElement.style.display = showBrand ? "" : "none";
+  }
 }
 
 function loadUserPreferences() {
-	browser.storage.sync.get().then((data) => {
-		if (data.theme) {
-			document.documentElement.dataset.theme = data.theme;
-		}
+  browser.storage.sync.get().then((data) => {
+    if (data.theme) {
+      document.documentElement.dataset.theme = data.theme;
+    }
 
-		if (data.activeExam) {
-			setActiveExam(data.activeExam);
-		} else {
-			// If no exam is selected, at least update the link
-			updateNovatraLink(currentExam);
-		}
+    if (data.activeExam) {
+      setActiveExam(data.activeExam);
+    } else {
+      // If no exam is selected, at least update the link
+      updateNovatraLink(currentExam);
+    }
 
-		if (data.customWallpaper) {
-			customWallpaper = data.customWallpaper;
-		}
+    if (data.customWallpaper) {
+      customWallpaper = data.customWallpaper;
+    }
 
-		if (data.backgroundBrightness !== undefined) {
-			backgroundBrightness = data.backgroundBrightness;
-		}
+    if (data.backgroundBrightness !== undefined) {
+      backgroundBrightness = data.backgroundBrightness;
+    }
 
-		// Restore wallpaper rotation state
-		if (data.wallpaperRotationPaused !== undefined) {
-			wallpaperRotationPaused = data.wallpaperRotationPaused;
-			// We'll update the icon after the DOM is fully loaded
-		}
+    // Restore wallpaper rotation state
+    if (data.wallpaperRotationPaused !== undefined) {
+      wallpaperRotationPaused = data.wallpaperRotationPaused;
+      // We'll update the icon after the DOM is fully loaded
+    }
 
-		const toggleDateTime = document.getElementById("toggle-datetime");
-		const toggleCountdown = document.getElementById("toggle-countdown");
-		const toggleQuote = document.getElementById("toggle-quote");
-		const toggleSeconds = document.getElementById("toggle-seconds");
-		const toggleBrand = document.getElementById("toggle-brand");
+    const toggleDateTime = document.getElementById("toggle-datetime");
+    const toggleCountdown = document.getElementById("toggle-countdown");
+    const toggleQuote = document.getElementById("toggle-quote");
+    const toggleSeconds = document.getElementById("toggle-seconds");
+    const toggleBrand = document.getElementById("toggle-brand");
 
-		if (data.widgetVisibility) {
-			// Update toggle inputs
-			if (toggleDateTime) toggleDateTime.checked = data.widgetVisibility.dateTime;
-			if (toggleCountdown) toggleCountdown.checked = data.widgetVisibility.countdown;
-			if (toggleQuote) toggleQuote.checked = data.widgetVisibility.quote;
-			if (toggleSeconds) toggleSeconds.checked = data.widgetVisibility.seconds;
-			if (toggleBrand) toggleBrand.checked = data.widgetVisibility.brand;
+    if (data.widgetVisibility) {
+      // Update toggle inputs
+      if (toggleDateTime)
+        toggleDateTime.checked = data.widgetVisibility.dateTime;
+      if (toggleCountdown)
+        toggleCountdown.checked = data.widgetVisibility.countdown;
+      if (toggleQuote) toggleQuote.checked = data.widgetVisibility.quote;
+      if (toggleSeconds) toggleSeconds.checked = data.widgetVisibility.seconds;
+      if (toggleBrand) toggleBrand.checked = data.widgetVisibility.brand;
 
-			// Apply visibility settings
-			updateWidgetVisibility(data.widgetVisibility.dateTime, data.widgetVisibility.countdown, data.widgetVisibility.quote, data.widgetVisibility.seconds, data.widgetVisibility.brand);
-		}
+      // Apply visibility settings
+      updateWidgetVisibility(
+        data.widgetVisibility.dateTime,
+        data.widgetVisibility.countdown,
+        data.widgetVisibility.quote,
+        data.widgetVisibility.seconds,
+        data.widgetVisibility.brand,
+      );
+    }
 
-		console.log(currentExam);
+    console.log(currentExam);
 
-		updateNovatraLink(currentExam);
-		setBackground();
-	});
+    updateNovatraLink(currentExam);
+    setBackground();
+  });
 }
 
 async function refetchData() {
-	try {
-		browser.runtime
-			.sendMessage({ action: "fetchExamDates" })
-			.then((response) => {
-				console.log(response.status);
-			})
-			.catch(console.error);
+  try {
+    browser.runtime
+      .sendMessage({ action: "fetchExamDates" })
+      .then((response) => {
+        console.log(response.status);
+      })
+      .catch(console.error);
 
-		browser.runtime
-			.sendMessage({ action: "fetchWallpapers" })
-			.then((response) => {
-				console.log(response.status);
-			})
-			.catch(console.error);
+    browser.runtime
+      .sendMessage({ action: "fetchWallpapers" })
+      .then((response) => {
+        console.log(response.status);
+      })
+      .catch(console.error);
 
-		alert("Successfully Refetched Data!");
-	} catch (error) {
-		console.error("Error Refetching Data :", error);
-		alert("Failed To Refetch Data. Check The Console For More Details");
-	}
+    alert("Successfully Refetched Data!");
+  } catch (error) {
+    console.error("Error Refetching Data :", error);
+    alert("Failed To Refetch Data. Check The Console For More Details");
+  }
 }
 
 function initializePage() {
-	updateDateTime();
-	setDefaultExam();
-	updateCountdown();
-	loadCustomExamData();
-	displayRandomQuote();
-	setupEventListeners();
-	loadUserPreferences();
-	updatePauseButtonIcon();
+  updateDateTime();
+  setDefaultExam();
+  updateCountdown();
+  loadCustomExamData();
+  displayRandomQuote();
+  setupEventListeners();
+  loadUserPreferences();
+  updatePauseButtonIcon();
 
-	setInterval(updateDateTime, 1000);
-	setInterval(updateCountdown, 1000);
-	setInterval(displayRandomQuote, 3600000);
+  setInterval(updateDateTime, 1000);
+  setInterval(updateCountdown, 1000);
+  setInterval(displayRandomQuote, 3600000);
 
-	setInterval(() => {
-		if (!wallpaperRotationPaused) {
-			changeWallpaper("next");
-		}
-	}, 5 * 60 * 1000);
+  setInterval(
+    () => {
+      if (!wallpaperRotationPaused) {
+        changeWallpaper("next");
+      }
+    },
+    5 * 60 * 1000,
+  );
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-	initializePage();
-	const refetchBtn = document.getElementById("refetch-data-btn").addEventListener("click", refetchData);
-
+  initializePage();
+  const refetchBtn = document
+    .getElementById("refetch-data-btn")
+    .addEventListener("click", refetchData);
 });
 
 function updatePauseButtonIcon() {
-	const pauseButton = document.getElementById("pause-wallpaper");
-	if (!pauseButton) return;
+  const pauseButton = document.getElementById("pause-wallpaper");
+  if (!pauseButton) return;
 
-	if (wallpaperRotationPaused) {
-		pauseButton.innerHTML = `
+  if (wallpaperRotationPaused) {
+    pauseButton.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
             </svg>
         `;
-		pauseButton.title = "Resume Wallpaper Rotation";
-	} else {
-		pauseButton.innerHTML = `
+    pauseButton.title = "Resume Wallpaper Rotation";
+  } else {
+    pauseButton.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
             </svg>
         `;
-		pauseButton.title = "Pause Wallpaper Rotation";
-	}
+    pauseButton.title = "Pause Wallpaper Rotation";
+  }
 }
 
-export { getTimeRemaining, getCustomExamData, hasValidCustomExam, loadCustomExamData };
+export {
+  getTimeRemaining,
+  getCustomExamData,
+  hasValidCustomExam,
+  loadCustomExamData,
+};
