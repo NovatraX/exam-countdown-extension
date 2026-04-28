@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
     <head>
         <meta charset="UTF-8" />
@@ -8,185 +8,327 @@
     </head>
     <body class="bg-base-200">
         <div class="p-4 w-96 flex flex-col items-center">
-            <header class="flex justify-center items-center mb-6 w-full">
+            <header class="flex justify-center items-center mb-4 w-full">
                 <h1 class="text-xl font-bold">Exam Countdowns</h1>
-                <button id="theme-toggle" class="ml-auto btn btn-ghost btn-circle btn-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-5 h-5" viewBox="0 0 24 24">
-                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                <button
+                    id="theme-toggle"
+                    class="ml-auto btn btn-ghost btn-circle btn-sm"
+                    title="Toggle theme"
+                    type="button"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        class="size-6"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+                        ></path>
                     </svg>
                 </button>
             </header>
-
-            <!-- Custom Exam Countdown -->
-            <div id="custom-exam-section" class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full hidden">
-                <div class="card-body p-4">
-                    <div class="flex justify-center items-center mb-3">
-                        <div id="custom-exam-badge" class="badge badge-primary badge-lg font-semibold">Custom Exam</div>
-                    </div>
-                    <div id="custom-exam-timer" class="text-center">
-                        <div class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center">
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="custom-exam-months" style="--value: 0"></span>
-                                </span>
-                                Months
+            <div class="tabs tabs-lift w-full" role="tablist">
+                <input
+                    id="countdowns-tab"
+                    type="radio"
+                    name="popup_tabs"
+                    class="tab tab-active"
+                    role="tab"
+                    aria-label="Countdowns"
+                    aria-selected="true"
+                    aria-controls="countdowns-panel"
+                    data-popup-tab="countdowns"
+                    checked="checked"
+                />
+                <main
+                    id="countdowns-panel"
+                    class="tab-content bg-base-100 border-base-300 p-4 w-full"
+                    role="tabpanel"
+                    aria-labelledby="countdowns-tab"
+                    data-popup-panel="countdowns"
+                >
+                    <div
+                        id="custom-exam-section"
+                        class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full hidden"
+                    >
+                        <div class="card-body p-4">
+                            <div class="flex justify-center items-center mb-3">
+                                <div
+                                    id="custom-exam-badge"
+                                    class="badge badge-primary badge-lg font-semibold"
+                                >
+                                    Custom Exam
+                                </div>
                             </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="custom-exam-days" style="--value: 0"></span>
-                                </span>
-                                Days
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="custom-exam-hours" style="--value: 0"></span>
-                                </span>
-                                Hours
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="custom-exam-minutes" style="--value: 0"></span>
-                                </span>
-                                Min
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="custom-exam-seconds" style="--value: 0"></span>
-                                </span>
-                                Sec
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- JEE Main Countdown -->
-            <div class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full">
-                <div class="card-body p-4">
-                    <div class="flex justify-center items-center mb-3">
-                        <div class="badge badge-primary badge-lg font-semibold">JEE Main</div>
-                    </div>
-                    <div id="jee-timer" class="text-center">
-                        <div class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center">
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-months" style="--value: 0"></span>
-                                </span>
-                                Months
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-days" style="--value: 0"></span>
-                                </span>
-                                Days
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-hours" style="--value: 0"></span>
-                                </span>
-                                Hours
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-minutes" style="--value: 0"></span>
-                                </span>
-                                Min
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-seconds" style="--value: 0"></span>
-                                </span>
-                                Sec
+                            <div id="custom-exam-timer" class="text-center">
+                                <div
+                                    class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center"
+                                >
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="custom-exam-months"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Months
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="custom-exam-days"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Days
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="custom-exam-hours"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Hours
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="custom-exam-minutes"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Min
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="custom-exam-seconds"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Sec
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- JEE Advanced Countdown -->
-            <div class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full">
-                <div class="card-body p-4">
-                    <div class="flex justify-center items-center mb-3">
-                        <div class="badge badge-primary badge-lg font-semibold">JEE Advanced</div>
-                    </div>
-                    <div id="jee-adv-timer" class="text-center">
-                        <div class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center">
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-adv-months" style="--value: 0"></span>
-                                </span>
-                                Months
+                    <div
+                        class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full"
+                    >
+                        <div class="card-body p-4">
+                            <div class="flex justify-center items-center mb-3">
+                                <div
+                                    class="badge badge-primary badge-lg font-semibold"
+                                >
+                                    JEE Main
+                                </div>
                             </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-adv-days" style="--value: 0"></span>
-                                </span>
-                                Days
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-adv-hours" style="--value: 0"></span>
-                                </span>
-                                Hours
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-adv-minutes" style="--value: 0"></span>
-                                </span>
-                                Min
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="jee-adv-seconds" style="--value: 0"></span>
-                                </span>
-                                Sec
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- NEET Countdown -->
-            <div class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full">
-                <div class="card-body p-4">
-                    <div class="flex justify-center items-center mb-3">
-                        <div class="badge badge-primary badge-lg font-semibold">NEET</div>
-                    </div>
-                    <div id="neet-timer" class="text-center">
-                        <div class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center">
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="neet-months" style="--value: 0"></span>
-                                </span>
-                                Months
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="neet-days" style="--value: 0"></span>
-                                </span>
-                                Days
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="neet-hours" style="--value: 0"></span>
-                                </span>
-                                Hours
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="neet-minutes" style="--value: 0"></span>
-                                </span>
-                                Min
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="countdown text-2xl">
-                                    <span id="neet-seconds" style="--value: 0"></span>
-                                </span>
-                                Sec
+                            <div id="jee-timer" class="text-center">
+                                <div
+                                    class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center"
+                                >
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-months"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Months
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-days"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Days
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-hours"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Hours
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-minutes"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Min
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-seconds"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Sec
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                    <div
+                        class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full"
+                    >
+                        <div class="card-body p-4">
+                            <div class="flex justify-center items-center mb-3">
+                                <div
+                                    class="badge badge-primary badge-lg font-semibold"
+                                >
+                                    JEE Advanced
+                                </div>
+                            </div>
+                            <div id="jee-adv-timer" class="text-center">
+                                <div
+                                    class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center"
+                                >
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-adv-months"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Months
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-adv-days"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Days
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-adv-hours"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Hours
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-adv-minutes"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Min
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="jee-adv-seconds"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Sec
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="card bg-base-100 shadow-md border border-base-300 mb-5 w-full"
+                    >
+                        <div class="card-body p-4">
+                            <div class="flex justify-center items-center mb-3">
+                                <div
+                                    class="badge badge-primary badge-lg font-semibold"
+                                >
+                                    NEET
+                                </div>
+                            </div>
+                            <div id="neet-timer" class="text-center">
+                                <div
+                                    class="grid grid-flow-col gap-2 text-center auto-cols-max justify-center"
+                                >
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="neet-months"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Months
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="neet-days"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Days
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="neet-hours"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Hours
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="neet-minutes"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Min
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="countdown text-2xl"
+                                            ><span
+                                                id="neet-seconds"
+                                                style="--value: 0"
+                                            ></span></span
+                                        >Sec
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+                <input
+                    id="unhook-yt-tab"
+                    type="radio"
+                    name="popup_tabs"
+                    class="tab"
+                    role="tab"
+                    aria-label="Unhook YouTube"
+                    aria-selected="false"
+                    aria-controls="unhook-yt-panel"
+                    data-popup-tab="unhook-yt"
+                />
+                <main
+                    id="unhook-yt-panel"
+                    class="tab-content bg-base-100 border-base-300 p-4 w-full hidden"
+                    role="tabpanel"
+                    aria-labelledby="unhook-yt-tab"
+                    data-popup-panel="unhook-yt"
+                >
+                    <section class="w-full">
+                        <div
+                            class="flex items-start justify-between gap-3 mb-2"
+                        >
+                            <div>
+                                <h2 class="card-title text-lg">
+                                    Unhook YouTube
+                                </h2>
+                            </div>
+                            <button
+                                id="reset-unhook-settings"
+                                class="btn btn-ghost btn-xs"
+                                type="button"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                        <div class="divider my-1"></div>
+                        <div
+                            id="unhook-settings-list"
+                            class="space-y-1 max-h-[430px] overflow-y-auto pr-1"
+                        ></div>
+                    </section>
+                </main>
             </div>
         </div>
         <script type="module" src="../popup/popup.js"></script>

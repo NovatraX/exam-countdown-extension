@@ -1,81 +1,11 @@
-import browser from "webextension-polyfill";
-
-let customExamName = "Custom Exam";
-let customExamDate = null;
-
-async function loadCustomExamData() {
-  if (!browser.storage || !browser.storage.sync) return;
-
-  try {
-    const data = await browser.storage.sync.get([
-      "customExamName",
-      "customExamDate",
-    ]);
-    if (data.customExamName) {
-      customExamName = data.customExamName;
-    }
-
-    if (data.customExamDate) {
-      customExamDate = new Date(data.customExamDate);
-    }
-  } catch (error) {
-    console.error("Error loading custom exam data:", error);
-  }
-}
-
-function saveCustomExamData(name, date) {
-  if (!browser.storage || !browser.storage.sync) return false;
-
-  customExamName = name || "Custom Exam";
-  customExamDate = date;
-
-  let dateValueToStore = null;
-  if (customExamDate && !isNaN(customExamDate.getTime())) {
-    dateValueToStore = customExamDate.toISOString();
-  }
-
-  try {
-    browser.storage.sync.set({
-      customExamName: customExamName,
-      customExamDate: dateValueToStore,
-    });
-    return true;
-  } catch (error) {
-    console.error("Error saving custom exam data:", error);
-    return false;
-  }
-}
-
-function getCustomExamData() {
-  return {
-    name: customExamName,
-    date: customExamDate,
-  };
-}
-
-function hasValidCustomExam() {
-  return customExamDate && !isNaN(customExamDate.getTime());
-}
-
-function getTimeRemaining(endDate, showSeconds = true) {
-  const total = endDate - new Date();
-
-  const month = Math.floor(total / (1000 * 60 * 60 * 24 * 30));
-  const days = Math.floor(
-    (total % (1000 * 60 * 60 * 24 * 30)) / (1000 * 60 * 60 * 24),
-  );
-  const hours = Math.floor((total % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((total % (1000 * 60 * 60)) / (1000 * 60));
-
-  let result = { total, month, days, hours, minutes };
-
-  if (showSeconds) {
-    const seconds = Math.floor((total % (1000 * 60)) / 1000);
-    result.seconds = seconds;
-  }
-
-  return result;
-}
+import browser from "../lib/browser-api.js";
+import {
+  getTimeRemaining,
+  getCustomExamData,
+  hasValidCustomExam,
+  loadCustomExamData,
+  saveCustomExamData,
+} from "../lib/countdown.js";
 
 const backgrounds = [
   "https://www.ghibli.jp/gallery/kazetachinu050.jpg",
@@ -1435,9 +1365,11 @@ function initializePage() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initializePage();
-  const refetchBtn = document
-    .getElementById("refetch-data-btn")
-    .addEventListener("click", refetchData);
+  const refetchBtn = document.getElementById("refetch-data-btn");
+
+  if (refetchBtn) {
+    refetchBtn.addEventListener("click", refetchData);
+  }
 });
 
 function updatePauseButtonIcon() {
@@ -1460,10 +1392,3 @@ function updatePauseButtonIcon() {
     pauseButton.title = "Pause Wallpaper Rotation";
   }
 }
-
-export {
-  getTimeRemaining,
-  getCustomExamData,
-  hasValidCustomExam,
-  loadCustomExamData,
-};
