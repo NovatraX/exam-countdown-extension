@@ -29,11 +29,18 @@
     "{{firefox}}.persistent": false
   },
   "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["*://www.youtube.com/*", "*://m.youtube.com/*"],
+      "js": ["content/youtube-unhook.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "chrome_url_overrides": {
     "newtab": "newtab/newtab.html"
   },
   "{{firefox}}.content_security_policy": "script-src 'self'; object-src 'self'",
   "{{chrome}}.content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self'"
-    }
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }

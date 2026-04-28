@@ -11,9 +11,6 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.5
         version: 4.1.5(vite@5.4.19(@types/node@22.15.7)(lightningcss@1.29.2))
-      '@types/webextension-polyfill':
-        specifier: ^0.12.3
-        version: 0.12.3
       addons-linter:
         specifier: ^7.11.0
         version: 7.11.0
@@ -29,9 +26,6 @@ importers:
       vite-plugin-web-extension:
         specifier: ^4.0.0
         version: 4.4.3(@types/node@22.15.7)(lightningcss@1.29.2)
-      webextension-polyfill:
-        specifier: ^0.10.0
-        version: 0.10.0
 
 packages:
 
@@ -462,9 +456,6 @@ packages:
 
   '@types/node@22.15.7':
     resolution: {integrity: sha512-3hieEH05p8cnASknk8cYV71K2Vqmn4Nv8gjvRc5N3XbMlBS4wPwsmsw5bcHw6ISL36vVFuAhElcQCf7Ir4bR0w==}
-
-  '@types/webextension-polyfill@0.12.3':
-    resolution: {integrity: sha512-F58aDVSeN/MjUGazXo/cPsmR76EvqQhQ1v4x23hFjUX0cfAJYE+JBWwiOGW36/VJGGxoH74sVlRIF3z7SJCKyg==}
 
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
@@ -2099,8 +2090,6 @@ snapshots:
   '@types/node@22.15.7':
     dependencies:
       undici-types: 6.21.0
-
-  '@types/webextension-polyfill@0.12.3': {}
 
   '@types/yauzl@2.10.3':
     dependencies:
