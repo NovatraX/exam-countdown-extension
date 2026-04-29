@@ -310,7 +310,7 @@
                             class="flex items-start justify-between gap-3 mb-2"
                         >
                             <div>
-                                <h2 class="card-title text-lg">
+                                <h2 class="card-title text-sm">
                                     Unhook YouTube
                                 </h2>
                             </div>
@@ -322,7 +322,6 @@
                                 Reset
                             </button>
                         </div>
-                        <div class="divider my-1"></div>
                         <div
                             id="unhook-settings-list"
                             class="space-y-1 max-h-[430px] overflow-y-auto pr-1"
@@ -348,27 +347,18 @@
                     data-popup-panel="site-blocker"
                 >
                     <section class="w-full space-y-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <h2 class="card-title text-lg">Site Blocker</h2>
-                                <p
-                                    id="site-blocker-status"
-                                    class="text-sm text-base-content/60"
-                                ></p>
-                            </div>
-                            <span
-                                id="site-blocker-badge"
-                                class="badge badge-ghost badge-sm"
-                            >
-                                Loading
-                            </span>
-                        </div>
-                        <p
-                            id="site-blocker-count"
-                            class="text-sm text-base-content/60"
+                        <div
+                            class="flex items-center justify-between gap-3 w-full"
                         >
-                            0 blocked sites
-                        </p>
+                            <h2 class="card-title text-sm">Site Blocker</h2>
+
+                            <p
+                                id="site-blocker-count"
+                                class="text-xs text-base-content/60 whitespace-nowrap"
+                            >
+                                0 Blocked Sites
+                            </p>
+                        </div>
                         <label
                             class="flex cursor-pointer items-center justify-between gap-3 rounded-box border border-base-300 bg-base-200 px-3 py-3 transition-colors hover:bg-base-300/70"
                         >

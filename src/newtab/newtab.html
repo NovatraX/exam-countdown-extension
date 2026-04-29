@@ -206,7 +206,10 @@
                                 </span>
                                 Minutes
                             </div>
-                            <div id="seconds-container" class="flex flex-col bglass">
+                            <div
+                                id="seconds-container"
+                                class="flex flex-col bglass"
+                            >
                                 <span class="countdown text-7xl py-1">
                                     <span
                                         id="countdown-seconds"
@@ -310,7 +313,9 @@
 
         <!-- Options Modal -->
         <dialog id="options-modal" class="modal">
-            <div class="modal-box bg-base-200 shadow-lg border border-base-300">
+            <div
+                class="modal-box bg-base-200 shadow-lg border border-base-300 max-w-xl"
+            >
                 <form method="dialog">
                     <button
                         class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
@@ -565,6 +570,31 @@
                 </div>
                 -->
                             </div>
+                        </div>
+
+                        <!-- YouTube Tab -->
+                        <input
+                            type="radio"
+                            name="preferences_tabs"
+                            class="tab"
+                            aria-label="YouTube"
+                        />
+                        <div
+                            class="tab-content bg-base-100 border-base-300 p-6"
+                        >
+                            <div
+                                class="mb-4 flex items-start justify-between gap-4"
+                            >
+                                <div>
+                                    <h4 class="font-semibold">
+                                        YouTube Blocking
+                                    </h4>
+                                </div>
+                            </div>
+                            <div
+                                id="newtab-unhook-settings-list"
+                                class="max-h-96 space-y-1 overflow-y-auto pr-1"
+                            ></div>
                         </div>
 
                         <!-- Site Blocker Tab -->

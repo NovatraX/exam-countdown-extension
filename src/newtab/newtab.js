@@ -13,6 +13,108 @@ import {
   normalizeSiteBlockerSettings,
 } from "../lib/blocker-settings.js";
 
+const UNHOOK_STORAGE_KEY = "youtubeUnhookSettings";
+const SIDEBAR_CHILD_SETTING_KEYS = [
+  "hideRecommended",
+  "hideLiveChat",
+  "hidePlaylist",
+  "hideAutoplay",
+];
+
+const defaultUnhookSettings = {
+  enabled: true,
+  hideHomeFeed: false,
+  hideHomeHeader: true,
+  hideTopHeader: false,
+  hideVideoSidebar: false,
+  expandVideoPlayer: true,
+  hideRecommended: true,
+  hideRecommendationShelves: true,
+  hideLiveChat: true,
+  hidePlaylist: true,
+  hideFundraiser: true,
+  hideEndScreenFeed: true,
+  hideEndScreenCards: true,
+  hideShorts: true,
+  hideComments: false,
+  hideMixes: false,
+  hideMerch: true,
+  hideVideoInfo: false,
+  hideVideoButtonsBar: false,
+  hideChannel: false,
+  hideDescription: false,
+  hideRelatedSearches: true,
+  hideExplore: false,
+  hideExploreFeed: true,
+  hideSubscriptions: false,
+  hideNotifications: false,
+  hideAutoplay: true,
+  disableAutoplay: true,
+  disableAnnotations: true,
+  hideChips: false,
+  hideAds: true,
+};
+
+const unhookOptions = [
+  { type: "heading", label: "Master" },
+  { key: "enabled", label: "Enable Unhook YT" },
+  { type: "heading", label: "Home" },
+  { key: "hideHomeFeed", label: "Hide home feed" },
+  { key: "hideHomeHeader", label: "Hide home header and chips" },
+  { key: "hideChips", label: "Hide topic chips" },
+  { type: "heading", label: "Header" },
+  { key: "hideTopHeader", label: "Hide top header" },
+  { key: "hideNotifications", label: "Hide notification bell", nested: true },
+  { type: "heading", label: "Watch page" },
+  { key: "hideVideoSidebar", label: "Hide entire video sidebar" },
+  {
+    key: "expandVideoPlayer",
+    label: "Expand player width",
+    nested: true,
+    disabledWhen: "hideVideoSidebarOff",
+  },
+  { key: "hideRecommended", label: "Hide recommended videos", nested: true },
+  { key: "hideLiveChat", label: "Hide live chat", nested: true },
+  { key: "hidePlaylist", label: "Hide playlists", nested: true },
+  { key: "hideAutoplay", label: "Hide autoplay controls", nested: true },
+  { key: "disableAutoplay", label: "Disable autoplay", nested: true },
+  { key: "hideVideoInfo", label: "Hide video info" },
+  {
+    key: "hideVideoButtonsBar",
+    label: "Hide video buttons bar",
+    nested: true,
+    disabledWhen: "hideVideoInfoOn",
+  },
+  {
+    key: "hideChannel",
+    label: "Hide channel and subscribe button",
+    nested: true,
+    disabledWhen: "hideVideoInfoOn",
+  },
+  {
+    key: "hideDescription",
+    label: "Hide video description",
+    nested: true,
+    disabledWhen: "hideVideoInfoOn",
+  },
+  { key: "hideComments", label: "Hide comments" },
+  { type: "heading", label: "Suggestions" },
+  { key: "hideEndScreenFeed", label: "Hide end screen videowall" },
+  { key: "hideEndScreenCards", label: "Hide end screen cards" },
+  { key: "hideShorts", label: "Hide Shorts" },
+  { key: "hideMixes", label: "Hide Mix radio playlists" },
+  { key: "disableAnnotations", label: "Disable annotations" },
+  { key: "hideRelatedSearches", label: "Hide irrelevant search results" },
+  { type: "heading", label: "Navigation and promos" },
+  { key: "hideExplore", label: "Hide Explore links" },
+  { key: "hideExploreFeed", label: "Hide and redirect Explore/Trending" },
+  { key: "hideSubscriptions", label: "Hide and redirect Subscriptions" },
+  { key: "hideFundraiser", label: "Hide fundraisers and donations" },
+  { key: "hideMerch", label: "Hide merch, tickets, offers" },
+  { key: "hideRecommendationShelves", label: "Hide More from YouTube" },
+  { key: "hideAds", label: "Hide ads and promos" },
+];
+
 const backgrounds = [
   "https://www.ghibli.jp/gallery/kazetachinu050.jpg",
   "https://www.ghibli.jp/gallery/kimitachi016.jpg",
@@ -729,6 +831,92 @@ async function saveSiteBlockerSettings(settings) {
   });
 }
 
+function normalizeUnhookSettings(settings = {}) {
+  const normalized = { ...defaultUnhookSettings };
+
+  if (!settings || typeof settings !== "object") {
+    return normalized;
+  }
+
+  Object.keys(defaultUnhookSettings).forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(settings, key)) {
+      normalized[key] = Boolean(settings[key]);
+    }
+  });
+
+  if (
+    Object.prototype.hasOwnProperty.call(settings, "hideAutoplay") &&
+    !Object.prototype.hasOwnProperty.call(settings, "disableAutoplay")
+  ) {
+    normalized.disableAutoplay = Boolean(settings.hideAutoplay);
+  }
+
+  return normalized;
+}
+
+function createUnhookToggleRow(option, settings) {
+  if (option.type === "heading") {
+    const heading = document.createElement("div");
+    heading.className =
+      "pt-3 pb-1 text-xs font-semibold uppercase tracking-wide opacity-60 first:pt-0";
+    heading.textContent = option.label;
+    return heading;
+  }
+
+  const isDisabled =
+    option.disabledWhen === "hideVideoSidebarOff"
+      ? !settings.hideVideoSidebar
+      : option.disabledWhen === "hideVideoInfoOn"
+        ? settings.hideVideoInfo
+        : false;
+
+  const label = document.createElement("label");
+  label.className =
+    "flex items-center justify-between gap-3 rounded-field px-2 py-2 hover:bg-base-200" +
+    (option.nested ? " ml-4 border-l border-base-300 pl-3" : "") +
+    (isDisabled ? " cursor-not-allowed opacity-45" : " cursor-pointer");
+
+  const text = document.createElement("span");
+  text.className = "min-w-0";
+  text.textContent = option.label;
+
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.className = "toggle toggle-primary toggle-sm";
+  input.dataset.unhookSetting = option.key;
+  input.checked = Boolean(settings[option.key]);
+  input.disabled = isDisabled;
+
+  label.append(text, input);
+  return label;
+}
+
+function renderUnhookSettings(settings) {
+  const list = document.getElementById("newtab-unhook-settings-list");
+
+  if (!list) {
+    return;
+  }
+
+  list.replaceChildren(
+    ...unhookOptions.map((option) => createUnhookToggleRow(option, settings)),
+  );
+}
+
+function readUnhookSettingsFromForm() {
+  const settings = { ...defaultUnhookSettings };
+
+  document
+    .querySelectorAll("[data-unhook-setting]")
+    .forEach((input) => {
+      if (input instanceof HTMLInputElement) {
+        settings[input.dataset.unhookSetting] = input.checked;
+      }
+    });
+
+  return settings;
+}
+
 function setupEventListeners() {
   const optionsLink = document.getElementById("options-link");
   const themeToggle = document.getElementById("theme-toggle");
@@ -766,6 +954,9 @@ function setupEventListeners() {
   const siteBlockerCount = document.getElementById("site-blocker-count");
   const siteBlockerValidation = document.getElementById(
     "site-blocker-validation",
+  );
+  const unhookSettingsList = document.getElementById(
+    "newtab-unhook-settings-list",
   );
 
   const saveMessage = document.getElementById("save-message");
@@ -823,6 +1014,7 @@ function setupEventListeners() {
       const siteBlockerSettings = normalizeSiteBlockerSettings(
         data[SITE_BLOCKER_STORAGE_KEY],
       );
+      const unhookSettings = normalizeUnhookSettings(data[UNHOOK_STORAGE_KEY]);
 
       if (siteBlockerEnabled) {
         siteBlockerEnabled.checked = siteBlockerSettings.enabled;
@@ -841,6 +1033,8 @@ function setupEventListeners() {
       if (siteBlockerValidation) {
         siteBlockerValidation.textContent = "";
       }
+
+      renderUnhookSettings(unhookSettings);
 
       updateUploadedWallpaperStatus(
         uploadedWallpaperStatus,
@@ -941,6 +1135,26 @@ function setupEventListeners() {
       } catch (error) {
         console.error("Failed to update site blocker status:", error);
       }
+    });
+  }
+
+  if (unhookSettingsList) {
+    unhookSettingsList.addEventListener("change", function (event) {
+      const input = event.target;
+
+      if (!(input instanceof HTMLInputElement) || !input.dataset.unhookSetting) {
+        return;
+      }
+
+      const settings = readUnhookSettingsFromForm();
+
+      if (input.dataset.unhookSetting === "hideVideoSidebar") {
+        SIDEBAR_CHILD_SETTING_KEYS.forEach((key) => {
+          settings[key] = input.checked;
+        });
+      }
+
+      renderUnhookSettings(settings);
     });
   }
 
@@ -1175,6 +1389,7 @@ function setupEventListeners() {
       const siteBlockerSites = siteBlockerPatterns
         ? normalizeSites(siteBlockerPatterns.value)
         : defaultSiteBlockerSettings.sites;
+      const unhookSettings = readUnhookSettingsFromForm();
 
       let customName = "";
       let customDate = null;
@@ -1223,6 +1438,7 @@ function setupEventListeners() {
           enabled: siteBlockerEnabled ? siteBlockerEnabled.checked : true,
           sites: siteBlockerSites,
         },
+        [UNHOOK_STORAGE_KEY]: unhookSettings,
         wallpaperIndex: currentWallpaperIndex,
         wallpaperRotationPaused: wallpaperRotationPaused,
       };

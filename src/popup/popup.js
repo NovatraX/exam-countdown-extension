@@ -14,11 +14,18 @@ import {
 } from "../lib/blocker-settings.js";
 
 const UNHOOK_STORAGE_KEY = "youtubeUnhookSettings";
+const SIDEBAR_CHILD_SETTING_KEYS = [
+  "hideRecommended",
+  "hideLiveChat",
+  "hidePlaylist",
+  "hideAutoplay",
+];
 
 const defaultUnhookSettings = {
   enabled: true,
   hideHomeFeed: false,
   hideHomeHeader: true,
+  hideTopHeader: false,
   hideVideoSidebar: false,
   expandVideoPlayer: true,
   hideRecommended: true,
@@ -33,12 +40,17 @@ const defaultUnhookSettings = {
   hideMixes: false,
   hideMerch: true,
   hideVideoInfo: false,
+  hideVideoButtonsBar: false,
+  hideChannel: false,
+  hideDescription: false,
   hideRelatedSearches: true,
   hideExplore: false,
   hideExploreFeed: true,
   hideSubscriptions: false,
   hideNotifications: false,
   hideAutoplay: true,
+  disableAutoplay: true,
+  disableAnnotations: true,
   hideChips: false,
   hideAds: true,
 };
@@ -47,14 +59,16 @@ const unhookOptions = [
   { type: "heading", label: "Master" },
   { key: "enabled", label: "Enable Unhook YT" },
   { type: "heading", label: "Home" },
-  { key: "hideHomeFeed", label: "Hide home feed" },
-  { key: "hideHomeHeader", label: "Hide home header and chips" },
-  { key: "hideRecommendationShelves", label: "Hide recommendation shelves" },
-  { key: "hideChips", label: "Hide topic chips" },
-  { type: "heading", label: "Watch page" },
+  { key: "hideHomeFeed", label: "Hide Home Feed" },
+  { key: "hideHomeHeader", label: "Hide Home Header and Chips" },
+  { key: "hideChips", label: "Hide Topic Chips" },
+  { type: "heading", label: "Header" },
+  { key: "hideTopHeader", label: "Hide Top Header" },
+  { key: "hideNotifications", label: "Hide Notification Bell", nested: true },
+  { type: "heading", label: "Watch Page" },
   {
     key: "hideVideoSidebar",
-    label: "Hide entire sidebar",
+    label: "Hide Entire Video Sidebar",
   },
   {
     key: "expandVideoPlayer",
@@ -64,43 +78,63 @@ const unhookOptions = [
   },
   {
     key: "hideRecommended",
-    label: "Hide recommended videos",
+    label: "Hide Recommended Videos",
     nested: true,
-    disabledWhen: "hideVideoSidebarOn",
   },
   {
     key: "hideLiveChat",
-    label: "Hide live chat",
+    label: "Hide Live Chat",
     nested: true,
-    disabledWhen: "hideVideoSidebarOn",
   },
   {
     key: "hidePlaylist",
-    label: "Hide playlists",
+    label: "Hide Playlists",
     nested: true,
-    disabledWhen: "hideVideoSidebarOn",
   },
   {
     key: "hideAutoplay",
-    label: "Hide autoplay",
+    label: "Hide autoplay controls",
     nested: true,
-    disabledWhen: "hideVideoSidebarOn",
+  },
+  {
+    key: "disableAutoplay",
+    label: "Disable autoplay",
+    nested: true,
   },
   { key: "hideVideoInfo", label: "Hide video info" },
+  {
+    key: "hideVideoButtonsBar",
+    label: "Hide video buttons bar",
+    nested: true,
+    disabledWhen: "hideVideoInfoOn",
+  },
+  {
+    key: "hideChannel",
+    label: "Hide channel and subscribe button",
+    nested: true,
+    disabledWhen: "hideVideoInfoOn",
+  },
+  {
+    key: "hideDescription",
+    label: "Hide video description",
+    nested: true,
+    disabledWhen: "hideVideoInfoOn",
+  },
   { key: "hideComments", label: "Hide comments" },
   { type: "heading", label: "Suggestions" },
-  { key: "hideEndScreenFeed", label: "Hide end screen suggestions" },
+  { key: "hideEndScreenFeed", label: "Hide end screen videowall" },
   { key: "hideEndScreenCards", label: "Hide end screen cards" },
   { key: "hideShorts", label: "Hide Shorts" },
-  { key: "hideMixes", label: "Hide mixes" },
-  { key: "hideRelatedSearches", label: "Hide related searches" },
+  { key: "hideMixes", label: "Hide Mix radio playlists" },
+  { key: "disableAnnotations", label: "Disable annotations" },
+  { key: "hideRelatedSearches", label: "Hide irrelevant search results" },
   { type: "heading", label: "Navigation and promos" },
   { key: "hideExplore", label: "Hide Explore links" },
-  { key: "hideExploreFeed", label: "Hide Explore and Trending feeds" },
-  { key: "hideSubscriptions", label: "Hide subscriptions" },
-  { key: "hideNotifications", label: "Hide notifications" },
-  { key: "hideFundraiser", label: "Hide fundraisers" },
+  { key: "hideExploreFeed", label: "Hide and redirect Explore/Trending" },
+  { key: "hideSubscriptions", label: "Hide and redirect Subscriptions" },
+  { key: "hideFundraiser", label: "Hide fundraisers and donations" },
   { key: "hideMerch", label: "Hide merch, tickets, offers" },
+  { key: "hideRecommendationShelves", label: "Hide More from YouTube" },
   { key: "hideAds", label: "Hide ads and promos" },
 ];
 
@@ -210,7 +244,22 @@ function setupTabs() {
 
 async function loadUnhookSettings() {
   const stored = await browser.storage.sync.get(UNHOOK_STORAGE_KEY);
-  return { ...defaultUnhookSettings, ...(stored[UNHOOK_STORAGE_KEY] || {}) };
+  const settings = {
+    ...defaultUnhookSettings,
+    ...(stored[UNHOOK_STORAGE_KEY] || {}),
+  };
+
+  if (
+    Object.prototype.hasOwnProperty.call(settings, "hideAutoplay") &&
+    !Object.prototype.hasOwnProperty.call(
+      stored[UNHOOK_STORAGE_KEY] || {},
+      "disableAutoplay",
+    )
+  ) {
+    settings.disableAutoplay = Boolean(settings.hideAutoplay);
+  }
+
+  return settings;
 }
 
 async function saveUnhookSettings(settings) {
@@ -252,10 +301,10 @@ function createToggleRow(option, settings) {
   }
 
   const isDisabled =
-    option.disabledWhen === "hideVideoSidebarOn"
-      ? settings.hideVideoSidebar
-      : option.disabledWhen === "hideVideoSidebarOff"
-        ? !settings.hideVideoSidebar
+    option.disabledWhen === "hideVideoSidebarOff"
+      ? !settings.hideVideoSidebar
+      : option.disabledWhen === "hideVideoInfoOn"
+        ? settings.hideVideoInfo
         : false;
 
   const label = document.createElement("label");
@@ -315,6 +364,13 @@ function setupUnhookSettingsList() {
 
     const nextSettings = await loadUnhookSettings();
     nextSettings[input.dataset.unhookSetting] = input.checked;
+
+    if (input.dataset.unhookSetting === "hideVideoSidebar") {
+      SIDEBAR_CHILD_SETTING_KEYS.forEach((key) => {
+        nextSettings[key] = input.checked;
+      });
+    }
+
     await saveUnhookSettings(nextSettings);
     await renderUnhookSettings();
   });
