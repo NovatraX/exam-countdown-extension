@@ -19,7 +19,7 @@ const defaultUnhookSettings = {
   enabled: true,
   hideHomeFeed: false,
   hideHomeHeader: true,
-  hideVideoSidebar: true,
+  hideVideoSidebar: false,
   expandVideoPlayer: true,
   hideRecommended: true,
   hideRecommendationShelves: true,
@@ -52,13 +52,41 @@ const unhookOptions = [
   { key: "hideRecommendationShelves", label: "Hide recommendation shelves" },
   { key: "hideChips", label: "Hide topic chips" },
   { type: "heading", label: "Watch page" },
-  { key: "hideVideoSidebar", label: "Hide video sidebar" },
-  { key: "expandVideoPlayer", label: "Expand player width", nested: true },
-  { key: "hideRecommended", label: "Hide recommended videos", nested: true },
-  { key: "hideLiveChat", label: "Hide live chat", nested: true },
-  { key: "hidePlaylist", label: "Hide playlists", nested: true },
-  { key: "hideAutoplay", label: "Hide autoplay", nested: true },
-  { key: "hideVideoInfo", label: "Hide video info", nested: true },
+  {
+    key: "hideVideoSidebar",
+    label: "Hide entire sidebar",
+  },
+  {
+    key: "expandVideoPlayer",
+    label: "Expand player width",
+    nested: true,
+    disabledWhen: "hideVideoSidebarOff",
+  },
+  {
+    key: "hideRecommended",
+    label: "Hide recommended videos",
+    nested: true,
+    disabledWhen: "hideVideoSidebarOn",
+  },
+  {
+    key: "hideLiveChat",
+    label: "Hide live chat",
+    nested: true,
+    disabledWhen: "hideVideoSidebarOn",
+  },
+  {
+    key: "hidePlaylist",
+    label: "Hide playlists",
+    nested: true,
+    disabledWhen: "hideVideoSidebarOn",
+  },
+  {
+    key: "hideAutoplay",
+    label: "Hide autoplay",
+    nested: true,
+    disabledWhen: "hideVideoSidebarOn",
+  },
+  { key: "hideVideoInfo", label: "Hide video info" },
   { key: "hideComments", label: "Hide comments" },
   { type: "heading", label: "Suggestions" },
   { key: "hideEndScreenFeed", label: "Hide end screen suggestions" },
@@ -187,6 +215,31 @@ async function loadUnhookSettings() {
 
 async function saveUnhookSettings(settings) {
   await browser.storage.sync.set({ [UNHOOK_STORAGE_KEY]: settings });
+  await applyUnhookSettingsInActiveTab(settings);
+}
+
+function isYouTubeUrl(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname === "www.youtube.com" || hostname === "m.youtube.com";
+  } catch {
+    return false;
+  }
+}
+
+async function applyUnhookSettingsInActiveTab(settings) {
+  const tab = await getActiveTab();
+
+  if (!tab?.id || !isYouTubeUrl(tab.url || "")) {
+    return;
+  }
+
+  try {
+    await browser.tabs.sendMessage(tab.id, {
+      action: "youtubeUnhookApplySettings",
+      settings,
+    });
+  } catch {}
 }
 
 function createToggleRow(option, settings) {
@@ -198,19 +251,39 @@ function createToggleRow(option, settings) {
     return heading;
   }
 
+  const isDisabled =
+    option.disabledWhen === "hideVideoSidebarOn"
+      ? settings.hideVideoSidebar
+      : option.disabledWhen === "hideVideoSidebarOff"
+        ? !settings.hideVideoSidebar
+        : false;
+
   const label = document.createElement("label");
   label.className =
-    "flex items-center justify-between gap-3 rounded-field px-2 py-2 cursor-pointer hover:bg-base-200" +
-    (option.nested ? " ml-4 border-l border-base-300 pl-3" : "");
+    "flex items-center justify-between gap-3 rounded-field px-2 py-2 hover:bg-base-200" +
+    (option.nested ? " ml-4 border-l border-base-300 pl-3" : "") +
+    (isDisabled ? " cursor-not-allowed opacity-45" : " cursor-pointer");
 
   const text = document.createElement("span");
-  text.textContent = option.label;
+  text.className = "flex min-w-0 flex-col";
+
+  const title = document.createElement("span");
+  title.textContent = option.label;
+  text.append(title);
+
+  if (option.description) {
+    const description = document.createElement("span");
+    description.className = "text-xs leading-tight opacity-60";
+    description.textContent = option.description;
+    text.append(description);
+  }
 
   const input = document.createElement("input");
   input.type = "checkbox";
   input.className = "toggle toggle-primary toggle-sm";
   input.dataset.unhookSetting = option.key;
   input.checked = Boolean(settings[option.key]);
+  input.disabled = isDisabled;
 
   label.append(text, input);
   return label;
@@ -243,6 +316,7 @@ function setupUnhookSettingsList() {
     const nextSettings = await loadUnhookSettings();
     nextSettings[input.dataset.unhookSetting] = input.checked;
     await saveUnhookSettings(nextSettings);
+    await renderUnhookSettings();
   });
 }
 
@@ -281,10 +355,7 @@ async function recheckSiteBlockerInTab(tabId) {
 
   try {
     await browser.tabs.sendMessage(tabId, { action: "siteBlockerRecheck" });
-  } catch {
-    // The storage listener is the primary live update path. This can fail on
-    // browser pages or tabs where the content script is not available.
-  }
+  } catch {}
 }
 
 async function renderCurrentSiteBlocker() {

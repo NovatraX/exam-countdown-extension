@@ -3,12 +3,19 @@
 
   const STORAGE_KEY = "youtubeUnhookSettings";
   const STYLE_ID = "novatra-youtube-unhook-style";
+  const ROOT_ATTR = "data-novatra-youtube-unhook";
+  const HOME_FEED_ATTR = "novatra-hide-home-feed";
+  const HIDDEN_ATTR = "data-novatra-unhook-hidden";
+  const ORIGINAL_DISPLAY_ATTR = "data-novatra-unhook-display";
+  const ORIGINAL_VISIBILITY_ATTR = "data-novatra-unhook-visibility";
+  const CLEANUP_DELAY_MS = 150;
+  const MAX_CLEANUP_DELAY_MS = 900;
 
   const defaultSettings = {
     enabled: true,
     hideHomeFeed: false,
     hideHomeHeader: true,
-    hideVideoSidebar: true,
+    hideVideoSidebar: false,
     expandVideoPlayer: true,
     hideRecommended: true,
     hideRecommendationShelves: true,
@@ -32,9 +39,322 @@
     hideAds: true,
   };
 
+  const cssRuleGroups = [
+    {
+      key: "hideHomeFeed",
+      selectors: [
+        "ytd-browse[page-subtype='home'] ytd-rich-grid-renderer",
+        "ytd-browse[page-subtype='home'] ytd-two-column-browse-results-renderer",
+        "ytd-browse[page-subtype='home'] #contents",
+        "ytd-browse[page-subtype='home'] ytd-continuation-item-renderer",
+        "ytd-browse[page-subtype='home'] ytd-rich-section-list-renderer",
+      ],
+    },
+    {
+      key: "hideHomeHeader",
+      selectors: [
+        "ytd-browse[page-subtype='home'] #header",
+        "ytd-browse[page-subtype='home'] .ytd-browse-chips-wrapper",
+        "ytd-browse[page-subtype='home'] ytd-feed-filter-chip-bar-renderer",
+        "ytd-browse[page-subtype='home'] #chips-wrapper",
+      ],
+    },
+    {
+      key: "hideVideoSidebar",
+      selectors: [
+        "ytd-watch-flexy #secondary",
+        "ytd-watch-flexy #secondary-inner",
+        "ytd-watch-flexy ytd-watch-next-secondary-results-renderer",
+        "ytd-watch-flexy #related",
+      ],
+    },
+    {
+      key: "hideRecommended",
+      enabled: (settings) => !settings.hideVideoSidebar,
+      selectors: [
+        "ytd-watch-flexy #secondary ytd-compact-video-renderer",
+        "ytd-watch-flexy #secondary ytd-compact-movie-renderer",
+        "ytd-watch-flexy #secondary ytd-compact-radio-renderer",
+        "ytd-watch-flexy #secondary ytd-compact-station-renderer",
+        "ytd-watch-flexy #secondary ytd-compact-promoted-video-renderer",
+        "ytd-watch-flexy #secondary ytd-reel-shelf-renderer",
+      ],
+    },
+    {
+      key: "hideRecommendationShelves",
+      selectors: [
+        "ytd-rich-shelf-renderer",
+        "ytd-rich-section-renderer:has(ytd-rich-shelf-renderer)",
+        "ytd-watch-flexy ytd-item-section-renderer:has(ytd-compact-video-renderer)",
+      ],
+    },
+    {
+      key: "hideLiveChat",
+      selectors: [
+        "ytd-live-chat-frame",
+        "#chat",
+        "#chat-container",
+        "ytd-watch-flexy[is-two-columns_] #chat-container",
+      ],
+    },
+    {
+      key: "hidePlaylist",
+      selectors: [
+        "ytd-playlist-panel-renderer",
+        "ytd-engagement-panel-section-list-renderer[target-id='engagement-panel-playlist']",
+        "ytd-watch-flexy ytd-playlist-panel-renderer",
+        "ytd-compact-playlist-renderer",
+      ],
+    },
+    {
+      key: "hideFundraiser",
+      selectors: [
+        "ytd-donation-shelf-renderer",
+        "ytd-donation-unavailable-renderer",
+        "ytd-compact-video-renderer ytd-thumbnail-overlay-bottom-panel-renderer",
+        "ytd-watch-flexy ytd-fundraiser-renderer",
+        "ytd-watch-flexy ytd-engagement-panel-section-list-renderer[target-id*='fundraiser']",
+      ],
+    },
+    {
+      key: "hideEndScreenFeed",
+      selectors: [
+        ".ytp-ce-element",
+        ".ytp-ce-covering-overlay",
+        ".ytp-ce-expanding-overlay",
+        ".ytp-ce-video",
+        ".ytp-ce-playlist",
+        ".ytp-ce-channel",
+        ".ytp-ce-website",
+        ".ytp-endscreen-content",
+        ".ytp-suggestion-set",
+        ".ytp-ce-element-show",
+        ".html5-endscreen",
+      ],
+    },
+    {
+      key: "hideEndScreenCards",
+      selectors: [
+        ".ytp-cards-button",
+        ".ytp-cards-teaser",
+        ".ytp-cards-teaser-box",
+        ".ytp-cards-shelf",
+        ".ytp-cards-card",
+        ".ytp-ce-card",
+        ".ytp-ce-card-border",
+      ],
+    },
+    {
+      key: "hideShorts",
+      selectors: [
+        "ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-shorts])",
+        "ytd-reel-shelf-renderer",
+        "ytd-mini-guide-entry-renderer[aria-label='Shorts']",
+        "ytd-guide-entry-renderer a[title='Shorts']",
+        "ytd-guide-entry-renderer:has(a[title='Shorts'])",
+        "ytd-grid-video-renderer:has(a[href^='/shorts/'])",
+        "ytd-rich-item-renderer:has(a[href^='/shorts/'])",
+        "ytd-video-renderer:has(a[href^='/shorts/'])",
+        "ytd-compact-video-renderer:has(a[href^='/shorts/'])",
+        "a[title='Shorts']",
+        "a[href^='/shorts/']",
+        "ytm-reel-shelf-renderer",
+      ],
+    },
+    {
+      key: "hideComments",
+      selectors: [
+        "ytd-comments",
+        "#comments",
+        "ytd-item-section-renderer#sections",
+        "ytd-engagement-panel-section-list-renderer[target-id='engagement-panel-comments-section']",
+      ],
+    },
+    {
+      key: "hideMixes",
+      selectors: [
+        "ytd-radio-renderer",
+        "ytd-compact-radio-renderer",
+        "ytd-rich-item-renderer:has(a[href*='start_radio=1'])",
+        "ytd-video-renderer:has(a[href*='start_radio=1'])",
+        "ytd-compact-video-renderer:has(a[href*='start_radio=1'])",
+        "ytd-playlist-renderer:has(a[href*='start_radio=1'])",
+      ],
+    },
+    {
+      key: "hideMerch",
+      selectors: [
+        "ytd-merch-shelf-renderer",
+        "ytd-product-list-renderer",
+        "ytd-product-renderer",
+        "ytd-engagement-panel-section-list-renderer[target-id='engagement-panel-structured-description'] ytd-merch-shelf-renderer",
+        "ytd-shopping-renderer",
+        "ytd-watch-flexy ytd-action-companion-ad-renderer",
+      ],
+    },
+    {
+      key: "hideVideoInfo",
+      selectors: [
+        "ytd-watch-metadata",
+        "#above-the-fold",
+        "#primary-inner > #info",
+        "#primary-inner > #meta",
+        "ytd-video-primary-info-renderer",
+        "ytd-video-secondary-info-renderer",
+      ],
+    },
+    {
+      key: "hideRelatedSearches",
+      selectors: [
+        "ytd-horizontal-card-list-renderer",
+        "ytd-watch-flexy ytd-search-refinement-card-renderer",
+        "ytd-search ytd-search-refinement-card-renderer",
+      ],
+    },
+    {
+      key: "hideExplore",
+      selectors: [
+        "ytd-guide-entry-renderer a[title='Explore']",
+        "ytd-guide-entry-renderer:has(a[title='Explore'])",
+        "ytd-mini-guide-entry-renderer[aria-label='Explore']",
+        "ytd-guide-section-renderer:has(a[href='/feed/explore'])",
+      ],
+    },
+    {
+      key: "hideExploreFeed",
+      selectors: [
+        "ytd-browse[page-subtype='trending'] #contents",
+        "ytd-browse[page-subtype='trending'] ytd-section-list-renderer",
+        "ytd-browse[page-subtype='explore'] #contents",
+        "ytd-browse[page-subtype='explore'] ytd-section-list-renderer",
+        "ytd-browse[page-subtype='channels'] #contents",
+      ],
+    },
+    {
+      key: "hideSubscriptions",
+      selectors: [
+        "ytd-guide-entry-renderer a[title='Subscriptions']",
+        "ytd-guide-entry-renderer:has(a[title='Subscriptions'])",
+        "ytd-mini-guide-entry-renderer[aria-label='Subscriptions']",
+        "ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-subscribed])",
+      ],
+    },
+    {
+      key: "hideNotifications",
+      selectors: [
+        "ytd-notification-topbar-button-renderer",
+        "ytm-notification-button-renderer",
+        "#notification-button",
+      ],
+    },
+    {
+      key: "hideAutoplay",
+      selectors: [
+        ".ytp-autonav-toggle-button-container",
+        ".ytp-autonav-endscreen-button-container",
+        "ytd-compact-autoplay-renderer",
+      ],
+    },
+    {
+      key: "hideChips",
+      selectors: [
+        "yt-chip-cloud-renderer",
+        "ytd-feed-filter-chip-bar-renderer",
+        "iron-selector#chips",
+        "#chips-wrapper.ytd-feed-filter-chip-bar-renderer",
+      ],
+    },
+    {
+      key: "hideAds",
+      selectors: [
+        "ytd-ad-slot-renderer",
+        "ytd-promoted-sparkles-web-renderer",
+        "ytd-promoted-video-renderer",
+        "ytd-display-ad-renderer",
+        "ytd-in-feed-ad-layout-renderer",
+        "ytd-action-companion-ad-renderer",
+        "ytd-companion-slot-renderer",
+        "ytd-player-legacy-desktop-watch-ads-renderer",
+        "ytd-banner-promo-renderer",
+        "ytd-statement-banner-renderer",
+        ".ytp-ad-module",
+        ".video-ads",
+        "#masthead-ad",
+      ],
+    },
+  ];
+
+  const domRules = [
+    {
+      key: "hideShorts",
+      roots:
+        "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer, ytd-rich-item-renderer, ytd-grid-video-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-rich-section-renderer",
+      matches: (element) =>
+        hasLink(
+          element,
+          "a[href^='/shorts/'], a[href*='youtube.com/shorts/']",
+        ) ||
+        hasExactText(element, "shorts") ||
+        (element.matches("ytd-rich-section-renderer") &&
+          hasLink(element, "a[href^='/shorts/']")),
+    },
+    {
+      key: "hideMixes",
+      roots:
+        "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-playlist-renderer, ytd-radio-renderer, ytd-compact-radio-renderer",
+      matches: (element) => {
+        const text = elementText(element);
+        return (
+          hasLink(element, "a[href*='start_radio=1']") ||
+          text.includes("mix - ") ||
+          text.includes("youtube mix")
+        );
+      },
+    },
+    {
+      key: "hideFundraiser",
+      roots:
+        "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-shelf-renderer, ytd-rich-section-renderer",
+      matches: (element) => {
+        const text = elementText(element);
+        return text.includes("fundraiser") || text.includes("donate now");
+      },
+    },
+    {
+      key: "hideMerch",
+      roots:
+        "ytd-shelf-renderer, ytd-rich-section-renderer, ytd-engagement-panel-section-list-renderer",
+      matches: (element) => {
+        const text = elementText(element);
+        return (
+          text.includes("merch") ||
+          text.includes("shop") ||
+          text.includes("store")
+        );
+      },
+    },
+    {
+      key: "hideExplore",
+      roots: "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer",
+      matches: (element) =>
+        hasLink(element, "a[href='/feed/explore']") ||
+        hasExactText(element, "explore"),
+    },
+    {
+      key: "hideSubscriptions",
+      roots: "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer",
+      matches: (element) =>
+        hasLink(element, "a[href='/feed/subscriptions']") ||
+        hasExactText(element, "subscriptions"),
+    },
+  ];
+
   let currentSettings = { ...defaultSettings };
   let routeObserver = null;
   let cleanupTimer = null;
+  let maxCleanupTimer = null;
+  let listenersReady = false;
+  const hiddenByScript = new Set();
 
   function getExtensionApi() {
     if (typeof browser !== "undefined") {
@@ -59,25 +379,59 @@
       const result = api.storage.sync.get(key);
 
       if (result && typeof result.then === "function") {
-        return result;
+        return result.catch(() => ({}));
       }
-    } catch {
-      console.log("Unable To Get Storage Sync");
-    }
+    } catch {}
 
     return new Promise((resolve) => {
       api.storage.sync.get(key, (items) => {
+        if (api.runtime?.lastError) {
+          resolve({});
+          return;
+        }
+
         resolve(items || {});
       });
     });
   }
 
-  function createRule(enabled, selector) {
-    if (!enabled) {
+  function normalizeSettings(settings) {
+    const normalized = { ...defaultSettings };
+
+    if (!settings || typeof settings !== "object") {
+      return normalized;
+    }
+
+    Object.keys(defaultSettings).forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(settings, key)) {
+        normalized[key] = Boolean(settings[key]);
+      }
+    });
+
+    return normalized;
+  }
+
+  function selectorIsSupported(selector) {
+    try {
+      document.documentElement.matches(selector);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function supportedSelectors(selectors) {
+    return selectors.filter(selectorIsSupported);
+  }
+
+  function createHideRule(selectors) {
+    const supported = supportedSelectors(selectors);
+
+    if (!supported.length) {
       return "";
     }
 
-    return `${selector}{display:none!important;visibility:hidden!important;pointer-events:none!important;}`;
+    return `${supported.join(",")}{display:none!important;visibility:hidden!important;pointer-events:none!important;}`;
   }
 
   function buildStyles(settings) {
@@ -85,323 +439,65 @@
       return "";
     }
 
-    const rules = [
-      createRule(
-        settings.hideHomeFeed,
-        [
-          "ytd-browse[page-subtype='home'] ytd-rich-grid-renderer",
-          "ytd-browse[page-subtype='home'] ytd-two-column-browse-results-renderer",
-          "ytd-browse[page-subtype='home'] #contents",
-          "ytd-browse[page-subtype='home'] ytd-continuation-item-renderer",
-          "ytd-browse[page-subtype='home'] ytd-rich-section-list-renderer",
-        ].join(","),
-      ),
+    const rules = cssRuleGroups
+      .filter(
+        (group) =>
+          settings[group.key] && (!group.enabled || group.enabled(settings)),
+      )
+      .map((group) => createHideRule(group.selectors))
+      .filter(Boolean);
 
-      createRule(
-        settings.hideHomeHeader,
-        [
-          "ytd-browse[page-subtype='home'] #header",
-          "ytd-browse[page-subtype='home'] .ytd-browse-chips-wrapper",
-          "ytd-browse[page-subtype='home'] ytd-feed-filter-chip-bar-renderer",
-          "ytd-browse[page-subtype='home'] #chips-wrapper",
-        ].join(","),
-      ),
+    if (settings.expandVideoPlayer && settings.hideVideoSidebar) {
+      rules.push(`
+        ytd-watch-flexy[flexy][is-two-columns_] #primary.ytd-watch-flexy,
+        ytd-watch-flexy[flexy] #primary.ytd-watch-flexy {
+          max-width: 100% !important;
+          width: 100% !important;
+        }
 
-      createRule(
-        settings.hideVideoSidebar,
-        [
-          "ytd-watch-flexy #secondary",
-          "ytd-watch-flexy #secondary-inner",
-          "ytd-watch-flexy ytd-watch-next-secondary-results-renderer",
-          "ytd-watch-flexy #related",
-        ].join(","),
-      ),
+        ytd-watch-flexy[flexy][is-two-columns_] #columns.ytd-watch-flexy {
+          max-width: 1280px !important;
+        }
+      `);
+    }
 
-      settings.expandVideoPlayer && settings.hideVideoSidebar
-        ? `
-					ytd-watch-flexy[flexy][is-two-columns_] #primary.ytd-watch-flexy,
-					ytd-watch-flexy[flexy] #primary.ytd-watch-flexy {
-						max-width: 100% !important;
-						width: 100% !important;
-					}
+    if (settings.hideHomeFeed) {
+      rules.push(`
+        html[${HOME_FEED_ATTR}='true'] ytd-browse[page-subtype='home'] #primary {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 60vh;
+        }
 
-					ytd-watch-flexy[flexy][is-two-columns_] #columns.ytd-watch-flexy {
-						max-width: 1280px !important;
-					}
-				`
-        : "",
+        html[${HOME_FEED_ATTR}='true'] ytd-browse[page-subtype='home'] #primary::before {
+          content: "Focus Mode - Use the search bar";
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 32px auto;
+          max-width: 720px;
+          min-height: 160px;
+          border: 1px solid rgba(255,255,255,.16);
+          border-radius: 16px;
+          color: var(--yt-spec-text-secondary, #aaa);
+          background: rgba(255,255,255,.04);
+          font: 500 20px "YouTube Sans", Roboto, Arial, sans-serif;
+          padding: 0 32px;
+          text-align: center;
+        }
 
-      createRule(
-        settings.hideRecommended && !settings.hideVideoSidebar,
-        [
-          "ytd-watch-flexy #secondary ytd-compact-video-renderer",
-          "ytd-watch-flexy #secondary ytd-compact-movie-renderer",
-          "ytd-watch-flexy #secondary ytd-compact-radio-renderer",
-          "ytd-watch-flexy #secondary ytd-compact-station-renderer",
-          "ytd-watch-flexy #secondary ytd-compact-promoted-video-renderer",
-          "ytd-watch-flexy #secondary ytd-compact-video-renderer",
-          "ytd-watch-flexy #secondary ytd-reel-shelf-renderer",
-        ].join(","),
-      ),
+        html[${HOME_FEED_ATTR}='true'] ytd-browse[page-subtype='home'] {
+          min-height: 320px !important;
+        }
+      `);
+    }
 
-      createRule(
-        settings.hideRecommendationShelves,
-        [
-          "ytd-rich-shelf-renderer",
-          "ytd-rich-section-renderer:has(ytd-rich-shelf-renderer)",
-          "ytd-watch-flexy ytd-item-section-renderer:has(ytd-compact-video-renderer)",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideLiveChat,
-        [
-          "ytd-live-chat-frame",
-          "#chat",
-          "#chat-container",
-          "ytd-watch-flexy[is-two-columns_] #chat-container",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hidePlaylist,
-        [
-          "ytd-playlist-panel-renderer",
-          "ytd-engagement-panel-section-list-renderer[target-id='engagement-panel-playlist']",
-          "ytd-watch-flexy ytd-playlist-panel-renderer",
-          "ytd-compact-playlist-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideFundraiser,
-        [
-          "ytd-donation-shelf-renderer",
-          "ytd-donation-unavailable-renderer",
-          "ytd-compact-video-renderer ytd-thumbnail-overlay-bottom-panel-renderer",
-          "ytd-watch-flexy ytd-fundraiser-renderer",
-          "ytd-watch-flexy ytd-engagement-panel-section-list-renderer[target-id*='fundraiser']",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideEndScreenFeed,
-        [
-          ".ytp-ce-element",
-          ".ytp-ce-covering-overlay",
-          ".ytp-ce-expanding-overlay",
-          ".ytp-ce-video",
-          ".ytp-ce-playlist",
-          ".ytp-ce-channel",
-          ".ytp-ce-website",
-          ".ytp-endscreen-content",
-          ".ytp-suggestion-set",
-          ".ytp-ce-element-show",
-          ".html5-endscreen",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideEndScreenCards,
-        [
-          ".ytp-cards-button",
-          ".ytp-cards-teaser",
-          ".ytp-cards-teaser-box",
-          ".ytp-cards-shelf",
-          ".ytp-cards-card",
-          ".ytp-ce-card",
-          ".ytp-ce-card-border",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideShorts,
-        [
-          "ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-shorts])",
-          "ytd-reel-shelf-renderer",
-          "ytd-mini-guide-entry-renderer[aria-label='Shorts']",
-          "ytd-guide-entry-renderer a[title='Shorts']",
-          "ytd-guide-entry-renderer:has(a[title='Shorts'])",
-          "ytd-grid-video-renderer:has(a[href^='/shorts/'])",
-          "ytd-rich-item-renderer:has(a[href^='/shorts/'])",
-          "ytd-video-renderer:has(a[href^='/shorts/'])",
-          "ytd-compact-video-renderer:has(a[href^='/shorts/'])",
-          "a[title='Shorts']",
-          "a[href^='/shorts/']",
-          "ytm-reel-shelf-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideComments,
-        [
-          "ytd-comments",
-          "#comments",
-          "ytd-item-section-renderer#sections",
-          "ytd-engagement-panel-section-list-renderer[target-id='engagement-panel-comments-section']",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideMixes,
-        [
-          "ytd-radio-renderer",
-          "ytd-compact-radio-renderer",
-          "ytd-rich-item-renderer:has(a[href*='start_radio=1'])",
-          "ytd-video-renderer:has(a[href*='start_radio=1'])",
-          "ytd-compact-video-renderer:has(a[href*='start_radio=1'])",
-          "ytd-playlist-renderer:has(a[href*='start_radio=1'])",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideMerch,
-        [
-          "ytd-merch-shelf-renderer",
-          "ytd-product-list-renderer",
-          "ytd-product-renderer",
-          "ytd-engagement-panel-section-list-renderer[target-id='engagement-panel-structured-description'] ytd-merch-shelf-renderer",
-          "ytd-shopping-renderer",
-          "ytd-watch-flexy ytd-action-companion-ad-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideVideoInfo,
-        [
-          "ytd-watch-metadata",
-          "#above-the-fold",
-          "#primary-inner > #info",
-          "#primary-inner > #meta",
-          "ytd-video-primary-info-renderer",
-          "ytd-video-secondary-info-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideRelatedSearches,
-        [
-          "ytd-horizontal-card-list-renderer",
-          "ytd-watch-flexy ytd-search-refinement-card-renderer",
-          "ytd-search ytd-search-refinement-card-renderer",
-          "ytd-feed-filter-chip-bar-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideExplore,
-        [
-          "ytd-guide-entry-renderer a[title='Explore']",
-          "ytd-guide-entry-renderer:has(a[title='Explore'])",
-          "ytd-mini-guide-entry-renderer[aria-label='Explore']",
-          "ytd-guide-section-renderer:has(a[href='/feed/explore'])",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideExploreFeed,
-        [
-          "ytd-browse[page-subtype='trending'] #contents",
-          "ytd-browse[page-subtype='trending'] ytd-section-list-renderer",
-          "ytd-browse[page-subtype='explore'] #contents",
-          "ytd-browse[page-subtype='explore'] ytd-section-list-renderer",
-          "ytd-browse[page-subtype='channels'] #contents",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideSubscriptions,
-        [
-          "ytd-guide-entry-renderer a[title='Subscriptions']",
-          "ytd-guide-entry-renderer:has(a[title='Subscriptions'])",
-          "ytd-mini-guide-entry-renderer[aria-label='Subscriptions']",
-          "ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-subscribed])",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideNotifications,
-        [
-          "ytd-notification-topbar-button-renderer",
-          "ytm-notification-button-renderer",
-          "#notification-button",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideAutoplay,
-        [
-          ".ytp-autonav-toggle-button-container",
-          ".ytp-autonav-endscreen-button-container",
-          "ytd-compact-autoplay-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideChips,
-        [
-          "yt-chip-cloud-renderer",
-          "ytd-feed-filter-chip-bar-renderer",
-          "iron-selector#chips",
-          "#chips-wrapper.ytd-feed-filter-chip-bar-renderer",
-        ].join(","),
-      ),
-
-      createRule(
-        settings.hideAds,
-        [
-          "ytd-ad-slot-renderer",
-          "ytd-promoted-sparkles-web-renderer",
-          "ytd-promoted-video-renderer",
-          "ytd-display-ad-renderer",
-          "ytd-in-feed-ad-layout-renderer",
-          "ytd-action-companion-ad-renderer",
-          "ytd-companion-slot-renderer",
-          "ytd-player-legacy-desktop-watch-ads-renderer",
-          "ytd-banner-promo-renderer",
-          "ytd-statement-banner-renderer",
-          ".ytp-ad-module",
-          ".video-ads",
-          "#masthead-ad",
-        ].join(","),
-      ),
-    ];
-
-    return `
-			${rules.join("\n")}
-
-			html[novatra-hide-home-feed='true'] ytd-browse[page-subtype='home'] #primary {
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				min-height: 60vh;
-			}
-
-			html[novatra-hide-home-feed='true'] ytd-browse[page-subtype='home'] #primary::before {
-				content: "Focus Mode - Use the search bar";
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				margin: 32px auto;
-				max-width: 720px;
-				min-height: 160px;
-				border: 1px solid rgba(255,255,255,.16);
-				border-radius: 16px;
-				color: var(--yt-spec-text-secondary, #aaa);
-				background: rgba(255,255,255,.04);
-				font: 500 20px "YouTube Sans", Roboto, Arial, sans-serif;
-				padding: 0 32px;
-				text-align: center;
-			}
-
-			html[novatra-hide-home-feed='true'] ytd-browse[page-subtype='home'] {
-				min-height: 320px !important;
-			}
-		`;
+    return rules.join("\n");
   }
 
   function applySettings(settings) {
-    currentSettings = { ...defaultSettings, ...(settings || {}) };
+    currentSettings = normalizeSettings(settings);
 
     let styleElement = document.getElementById(STYLE_ID);
 
@@ -413,110 +509,167 @@
     }
 
     styleElement.textContent = buildStyles(currentSettings);
-
-    document.documentElement.toggleAttribute(
-      "novatra-hide-home-feed",
-      Boolean(currentSettings.enabled && currentSettings.hideHomeFeed),
+    document.documentElement.setAttribute(
+      ROOT_ATTR,
+      currentSettings.enabled ? "enabled" : "disabled",
     );
+    if (currentSettings.enabled && currentSettings.hideHomeFeed) {
+      document.documentElement.setAttribute(HOME_FEED_ATTR, "true");
+    } else {
+      document.documentElement.removeAttribute(HOME_FEED_ATTR);
+    }
 
-    scheduleCleanup();
+    scheduleCleanup(true);
   }
 
   function elementText(element) {
-    return (element?.textContent || "").trim().toLowerCase();
+    return (element?.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function hasExactText(element, expectedText) {
+    return elementText(element) === expectedText;
+  }
+
+  function hasLink(element, selector) {
+    try {
+      return Boolean(element?.querySelector(selector));
+    } catch {
+      return false;
+    }
+  }
+
+  function safeQuerySelectorAll(selector) {
+    try {
+      return Array.from(document.querySelectorAll(selector));
+    } catch {
+      return [];
+    }
+  }
+
+  function restoreElement(element) {
+    if (!element || element.getAttribute(HIDDEN_ATTR) !== "true") {
+      return;
+    }
+
+    const originalDisplay = element.getAttribute(ORIGINAL_DISPLAY_ATTR);
+    const originalVisibility = element.getAttribute(ORIGINAL_VISIBILITY_ATTR);
+
+    element.removeAttribute(HIDDEN_ATTR);
+    element.removeAttribute(ORIGINAL_DISPLAY_ATTR);
+    element.removeAttribute(ORIGINAL_VISIBILITY_ATTR);
+
+    if (originalDisplay) {
+      element.style.setProperty("display", originalDisplay);
+    } else {
+      element.style.removeProperty("display");
+    }
+
+    if (originalVisibility) {
+      element.style.setProperty("visibility", originalVisibility);
+    } else {
+      element.style.removeProperty("visibility");
+    }
+
+    hiddenByScript.delete(element);
   }
 
   function hideElement(element) {
-    if (!element || element.dataset.novatraUnhookHidden === "true") {
+    if (!element || element.getAttribute(HIDDEN_ATTR) === "true") {
       return;
     }
 
-    element.dataset.novatraUnhookHidden = "true";
+    element.setAttribute(HIDDEN_ATTR, "true");
+    element.setAttribute(ORIGINAL_DISPLAY_ATTR, element.style.display || "");
+    element.setAttribute(
+      ORIGINAL_VISIBILITY_ATTR,
+      element.style.visibility || "",
+    );
     element.style.setProperty("display", "none", "important");
     element.style.setProperty("visibility", "hidden", "important");
+    hiddenByScript.add(element);
   }
 
-  function cleanupByText() {
+  function pruneDetachedElements() {
+    hiddenByScript.forEach((element) => {
+      if (!document.documentElement.contains(element)) {
+        hiddenByScript.delete(element);
+      }
+    });
+  }
+
+  function activeDomRules() {
     if (!currentSettings.enabled) {
+      return [];
+    }
+
+    return domRules.filter((rule) => currentSettings[rule.key]);
+  }
+
+  function elementStillMatchesActiveRule(element, rules) {
+    return rules.some((rule) => {
+      try {
+        return element.matches(rule.roots) && rule.matches(element);
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  function cleanupDom() {
+    const rules = activeDomRules();
+
+    pruneDetachedElements();
+
+    hiddenByScript.forEach((element) => {
+      if (!elementStillMatchesActiveRule(element, rules)) {
+        restoreElement(element);
+      }
+    });
+
+    rules.forEach((rule) => {
+      safeQuerySelectorAll(rule.roots).forEach((element) => {
+        if (rule.matches(element)) {
+          hideElement(element);
+        }
+      });
+    });
+  }
+
+  function clearCleanupTimers() {
+    if (cleanupTimer) {
+      clearTimeout(cleanupTimer);
+      cleanupTimer = null;
+    }
+
+    if (maxCleanupTimer) {
+      clearTimeout(maxCleanupTimer);
+      maxCleanupTimer = null;
+    }
+  }
+
+  function runCleanup() {
+    clearCleanupTimers();
+    cleanupDom();
+  }
+
+  function scheduleCleanup(immediate = false) {
+    if (immediate) {
+      runCleanup();
       return;
     }
 
-    if (currentSettings.hideShorts) {
-      document
-        .querySelectorAll(
-          "ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer, ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer",
-        )
-        .forEach((element) => {
-          const text = elementText(element);
-          const link = element.querySelector("a[href^='/shorts/']");
-
-          if (link || text === "shorts") {
-            hideElement(element);
-          }
-        });
-    }
-
-    if (currentSettings.hideMixes) {
-      document
-        .querySelectorAll(
-          "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-playlist-renderer",
-        )
-        .forEach((element) => {
-          const text = elementText(element);
-          const radioLink = element.querySelector("a[href*='start_radio=1']");
-
-          if (
-            radioLink ||
-            text.includes("mix - ") ||
-            text.includes("youtube mix")
-          ) {
-            hideElement(element);
-          }
-        });
-    }
-
-    if (currentSettings.hideFundraiser) {
-      document
-        .querySelectorAll(
-          "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-shelf-renderer",
-        )
-        .forEach((element) => {
-          const text = elementText(element);
-
-          if (text.includes("fundraiser") || text.includes("donate now")) {
-            hideElement(element);
-          }
-        });
-    }
-
-    if (currentSettings.hideMerch) {
-      document
-        .querySelectorAll(
-          "ytd-shelf-renderer, ytd-rich-section-renderer, ytd-engagement-panel-section-list-renderer",
-        )
-        .forEach((element) => {
-          const text = elementText(element);
-
-          if (
-            text.includes("merch") ||
-            text.includes("shop") ||
-            text.includes("store")
-          ) {
-            hideElement(element);
-          }
-        });
-    }
-  }
-
-  function scheduleCleanup() {
     if (cleanupTimer) {
       clearTimeout(cleanupTimer);
     }
 
-    cleanupTimer = setTimeout(() => {
-      cleanupTimer = null;
-      cleanupByText();
-    }, 100);
+    cleanupTimer = setTimeout(runCleanup, CLEANUP_DELAY_MS);
+
+    if (!maxCleanupTimer) {
+      maxCleanupTimer = setTimeout(runCleanup, MAX_CLEANUP_DELAY_MS);
+    }
   }
 
   async function loadSettings() {
@@ -540,6 +693,28 @@
     });
   }
 
+  function watchRuntimeMessages() {
+    const api = getExtensionApi();
+
+    if (!api?.runtime?.onMessage) {
+      return;
+    }
+
+    api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message?.action !== "youtubeUnhookApplySettings") {
+        return false;
+      }
+
+      applySettings(message.settings);
+
+      if (typeof sendResponse === "function") {
+        sendResponse({ ok: true });
+      }
+
+      return false;
+    });
+  }
+
   function watchYouTubeNavigation() {
     if (routeObserver) {
       routeObserver.disconnect();
@@ -554,14 +729,21 @@
       subtree: true,
     });
 
-    window.addEventListener("yt-navigate-finish", scheduleCleanup, true);
-    window.addEventListener("yt-page-data-updated", scheduleCleanup, true);
-    window.addEventListener("popstate", scheduleCleanup, true);
+    if (listenersReady) {
+      return;
+    }
+
+    listenersReady = true;
+    window.addEventListener("yt-navigate-finish", loadSettings, true);
+    window.addEventListener("yt-page-data-updated", loadSettings, true);
+    window.addEventListener("popstate", () => scheduleCleanup(true), true);
+    window.addEventListener("pageshow", () => scheduleCleanup(true), true);
   }
 
   function init() {
     loadSettings();
     watchStorageChanges();
+    watchRuntimeMessages();
     watchYouTubeNavigation();
   }
 
