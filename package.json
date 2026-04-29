@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "addons-linter"
+    "lint": "addons-linter dist"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.5",
