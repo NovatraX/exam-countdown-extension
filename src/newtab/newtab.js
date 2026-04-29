@@ -635,7 +635,7 @@ async function updateCountdown() {
     countdownDaysElement.style = `--value:${timeRemaining.days}`;
     countdownHoursElement.style = `--value:${timeRemaining.hours}`;
     countdownMinutesElement.style = `--value:${timeRemaining.minutes}`;
-    countdownSecondsElement.style = `--value:${timeRemaining.seconds}`;
+    countdownSecondsElement.style = `--value:${showSeconds ? timeRemaining.seconds : 0}`;
     countdownLabelElement.textContent = "";
   }
 }
