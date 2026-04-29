@@ -353,7 +353,7 @@ async function displayRandomQuote() {
 
   try {
     const response = await fetch(
-      "http://api.quotable.io/quotes/random?tags=inspirational|motivational|productivity|education|wisdom|success|work",
+      "https://api.quotable.io/quotes/random?tags=inspirational|motivational|productivity|education|wisdom|success|work",
     );
     const data = await response.json();
 
@@ -1318,19 +1318,16 @@ function loadUserPreferences() {
 
 async function refetchData() {
   try {
-    browser.runtime
-      .sendMessage({ action: "fetchExamDates" })
-      .then((response) => {
-        console.log(response.status);
-      })
-      .catch(console.error);
+    const responses = await Promise.all([
+      browser.runtime.sendMessage({ action: "fetchExamDates" }),
+      browser.runtime.sendMessage({ action: "fetchWallpapers" }),
+    ]);
 
-    browser.runtime
-      .sendMessage({ action: "fetchWallpapers" })
-      .then((response) => {
-        console.log(response.status);
-      })
-      .catch(console.error);
+    const failedResponse = responses.find((response) => response?.error);
+
+    if (failedResponse) {
+      throw new Error(failedResponse.error);
+    }
 
     alert("Successfully Refetched Data!");
   } catch (error) {
