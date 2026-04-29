@@ -2,40 +2,40 @@
 @tailwind utilities;
 
 @plugin "daisyui" {
-	exclude: rootscrollgutter;
+    exclude: rootscrollgutter;
 }
 
 @layer utilities {
-	.bglass {
-		@apply rounded-xl bg-black/25 backdrop-blur-sm py-3 min-w-[96px] items-center justify-center gap-1 px-3;
-	}
+    .bglass {
+        @apply rounded-xl bg-black/25 backdrop-blur-sm py-3 min-w-[96px] items-center justify-center gap-1 px-3;
+    }
 }
 
 :root {
-	--bg-brightness: 0.4;
+    --bg-brightness: 0.4;
 }
 
 .background {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: -1;
-	background-size: cover;
-	background-position: center;
-	background-repeat: no-repeat;
-	transition: all 0.8s ease-in-out;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: all 0.8s ease-in-out;
 }
 
 .background::after {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: -1;
-	transition: background-color 0.5s ease;
-	background-color: rgba(0, 0, 0, calc(1 - var(--bg-brightness)));
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    transition: background-color 0.5s ease;
+    background-color: rgba(0, 0, 0, calc(1 - var(--bg-brightness)));
 }

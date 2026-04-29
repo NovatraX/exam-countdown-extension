@@ -170,6 +170,31 @@ function createStorage() {
   };
 }
 
+function createTabs() {
+	if (!hasExtensionRuntime || !nativeApi?.tabs) {
+		return {
+			query() {
+				return Promise.resolve([]);
+			},
+			sendMessage() {
+				return Promise.resolve(undefined);
+			},
+		};
+	}
+
+	return {
+		query(queryInfo) {
+			return promiseOrCallbackApiCall(nativeApi.tabs, "query", [queryInfo]);
+		},
+		sendMessage(tabId, message) {
+			return promiseOrCallbackApiCall(nativeApi.tabs, "sendMessage", [
+				tabId,
+				message,
+			]);
+		},
+	};
+}
+
 function sendMessage(message) {
   if (!hasExtensionRuntime || !nativeApi?.runtime?.sendMessage) {
     return Promise.resolve({ status: "Extension runtime unavailable" });
@@ -235,8 +260,16 @@ function createOnMessageEvent() {
 
 const browser = {
   storage: createStorage(),
+  tabs: createTabs(),
   runtime: {
     id: nativeApi?.runtime?.id,
+    getURL(path) {
+      if (nativeApi?.runtime?.getURL) {
+        return nativeApi.runtime.getURL(path);
+      }
+
+      return path;
+    },
     sendMessage,
     onInstalled: nativeApi?.runtime?.onInstalled || createNoopEvent(),
     onStartup: nativeApi?.runtime?.onStartup || createNoopEvent(),

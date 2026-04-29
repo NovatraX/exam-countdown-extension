@@ -1,0 +1,41 @@
+{
+  "headlines": [
+    "Nice try.",
+    "Task dodging detected.",
+    "Future you is watching.",
+    "This tab looks suspicious.",
+    "Productivity court is in session."
+  ],
+  "messages": [
+    "{host} promised one quick peek. Historically, that promise has the reliability of a group project.",
+    "Your work did not finish itself while this page loaded. Rude, but predictable.",
+    "One scroll becomes twenty, then suddenly you are watching a stranger organize their fridge.",
+    "This is probably not the boss fight you meant to start. The actual quest is still waiting.",
+    "Close this now and your to-do list might forgive you. It has been through a lot."
+  ],
+  "allowUsed": [
+    "That pass is already spent today. The loophole department is closed.",
+    "Nope, that ticket was punched already. Back to the mission.",
+    "Allowance used. Your attention span filed a complaint."
+  ],
+  "kept": [
+    "Good. The block stays. Proud of that tiny responsible click.",
+    "Block kept. Character development detected.",
+    "Excellent. The distraction trap remains locked."
+  ],
+  "unblocked": [
+    "{host} is unblocked. Use this power like an adult.",
+    "The guardrail is gone for {host}. Do not make this weird.",
+    "{host} is free. Your tasks are still waiting."
+  ],
+  "confirmFirst": [
+    "Unblock {host}? This is the part where the distraction pretends it is important.",
+    "Really unblock {host}? Be honest: is this useful, or just shiny?",
+    "Remove the block for {host}? Your focus was doing fine until this button appeared."
+  ],
+  "confirmSecond": [
+    "Last chance. Are you choosing work, or choosing the dopamine vending machine?",
+    "Final check: will this help the task, or just help you avoid the task?",
+    "One more time: would future you approve, or sigh loudly?"
+  ]
+}

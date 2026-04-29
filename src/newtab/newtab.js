@@ -6,6 +6,12 @@ import {
   loadCustomExamData,
   saveCustomExamData,
 } from "../lib/countdown.js";
+import {
+  SITE_BLOCKER_STORAGE_KEY,
+  defaultSiteBlockerSettings,
+  normalizeSites,
+  normalizeSiteBlockerSettings,
+} from "../lib/blocker-settings.js";
 
 const backgrounds = [
   "https://www.ghibli.jp/gallery/kazetachinu050.jpg",
@@ -708,6 +714,21 @@ async function updateExamDropdownLabels({ customExam }) {
   }
 }
 
+function formatSiteCount(count) {
+  return `${count} blocked ${count === 1 ? "site" : "sites"}`;
+}
+
+async function loadSiteBlockerSettings() {
+  const stored = await browser.storage.sync.get(SITE_BLOCKER_STORAGE_KEY);
+  return normalizeSiteBlockerSettings(stored[SITE_BLOCKER_STORAGE_KEY]);
+}
+
+async function saveSiteBlockerSettings(settings) {
+  await browser.storage.sync.set({
+    [SITE_BLOCKER_STORAGE_KEY]: normalizeSiteBlockerSettings(settings),
+  });
+}
+
 function setupEventListeners() {
   const optionsLink = document.getElementById("options-link");
   const themeToggle = document.getElementById("theme-toggle");
@@ -740,6 +761,12 @@ function setupEventListeners() {
   const toggleQuote = document.getElementById("toggle-quote");
   const toggleSeconds = document.getElementById("toggle-seconds");
   const toggleBrand = document.getElementById("toggle-brand");
+  const siteBlockerEnabled = document.getElementById("site-blocker-enabled");
+  const siteBlockerPatterns = document.getElementById("site-blocker-patterns");
+  const siteBlockerCount = document.getElementById("site-blocker-count");
+  const siteBlockerValidation = document.getElementById(
+    "site-blocker-validation",
+  );
 
   const saveMessage = document.getElementById("save-message");
 
@@ -791,6 +818,28 @@ function setupEventListeners() {
         brightnessSlider.value = data.backgroundBrightness;
       } else {
         brightnessSlider.value = 0.4;
+      }
+
+      const siteBlockerSettings = normalizeSiteBlockerSettings(
+        data[SITE_BLOCKER_STORAGE_KEY],
+      );
+
+      if (siteBlockerEnabled) {
+        siteBlockerEnabled.checked = siteBlockerSettings.enabled;
+      }
+
+      if (siteBlockerPatterns) {
+        siteBlockerPatterns.value = siteBlockerSettings.sites.join("\n");
+      }
+
+      if (siteBlockerCount) {
+        siteBlockerCount.textContent = formatSiteCount(
+          siteBlockerSettings.sites.length,
+        );
+      }
+
+      if (siteBlockerValidation) {
+        siteBlockerValidation.textContent = "";
       }
 
       updateUploadedWallpaperStatus(
@@ -871,6 +920,30 @@ function setupEventListeners() {
   if (optionsLink) {
     optionsLink.addEventListener("click", showOptionsModal);
   }
+
+  if (siteBlockerPatterns && siteBlockerCount) {
+    siteBlockerPatterns.addEventListener("input", function () {
+      siteBlockerCount.textContent = formatSiteCount(
+        normalizeSites(this.value).length,
+      );
+    });
+  }
+
+  if (siteBlockerEnabled) {
+    siteBlockerEnabled.addEventListener("change", async function () {
+      try {
+        const settings = await loadSiteBlockerSettings();
+
+        await saveSiteBlockerSettings({
+          ...settings,
+          enabled: this.checked,
+        });
+      } catch (error) {
+        console.error("Failed to update site blocker status:", error);
+      }
+    });
+  }
+
   if (themeToggle) {
     themeToggle.addEventListener("click", function () {
       document.documentElement.dataset.theme =
@@ -1099,9 +1172,16 @@ function setupEventListeners() {
       let showQuote = toggleQuote ? toggleQuote.checked : true;
       let showSeconds = toggleSeconds ? toggleSeconds.checked : true;
       let showBrand = toggleBrand ? toggleBrand.checked : true;
+      const siteBlockerSites = siteBlockerPatterns
+        ? normalizeSites(siteBlockerPatterns.value)
+        : defaultSiteBlockerSettings.sites;
 
       let customName = "";
       let customDate = null;
+
+      if (siteBlockerValidation) {
+        siteBlockerValidation.textContent = "";
+      }
 
       if (activeExam === "custom") {
         customName = customExamNameInput.value.trim();
@@ -1138,6 +1218,10 @@ function setupEventListeners() {
           quote: showQuote,
           seconds: showSeconds,
           brand: showBrand,
+        },
+        [SITE_BLOCKER_STORAGE_KEY]: {
+          enabled: siteBlockerEnabled ? siteBlockerEnabled.checked : true,
+          sites: siteBlockerSites,
         },
         wallpaperIndex: currentWallpaperIndex,
         wallpaperRotationPaused: wallpaperRotationPaused,

@@ -28,13 +28,27 @@
     "{{firefox}}.scripts": ["background/background.js"],
     "{{firefox}}.persistent": false
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
   "content_scripts": [
     {
       "matches": ["*://www.youtube.com/*", "*://m.youtube.com/*"],
       "js": ["content/youtube-unhook.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content/site-blocker.js"],
+      "run_at": "document_start"
     }
+  ],
+  "{{chrome}}.web_accessible_resources": [
+    {
+      "resources": ["blocker-settings.css"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
+  "{{firefox}}.web_accessible_resources": [
+    "blocker-settings.css"
   ],
   "chrome_url_overrides": {
     "newtab": "newtab/newtab.html"
