@@ -14,105 +14,14 @@ import {
 } from "../lib/blocker-settings.js";
 
 const UNHOOK_STORAGE_KEY = "youtubeUnhookSettings";
-const SIDEBAR_CHILD_SETTING_KEYS = [
-  "hideRecommended",
-  "hideLiveChat",
-  "hidePlaylist",
-  "hideAutoplay",
-];
-
 const defaultUnhookSettings = {
   enabled: true,
-  hideHomeFeed: false,
-  hideHomeHeader: true,
-  hideTopHeader: false,
-  hideVideoSidebar: false,
-  expandVideoPlayer: true,
-  hideRecommended: true,
-  hideRecommendationShelves: true,
-  hideLiveChat: true,
-  hidePlaylist: true,
-  hideFundraiser: true,
-  hideEndScreenFeed: true,
-  hideEndScreenCards: true,
   hideShorts: true,
-  hideComments: false,
-  hideMixes: false,
-  hideMerch: true,
-  hideVideoInfo: false,
-  hideVideoButtonsBar: false,
-  hideChannel: false,
-  hideDescription: false,
-  hideRelatedSearches: true,
-  hideExplore: false,
-  hideExploreFeed: true,
-  hideSubscriptions: false,
-  hideNotifications: false,
-  hideAutoplay: true,
-  disableAutoplay: true,
-  disableAnnotations: true,
-  hideChips: false,
-  hideAds: true,
 };
 
 const unhookOptions = [
-  { type: "heading", label: "Master" },
-  { key: "enabled", label: "Enable Unhook YT" },
-  { type: "heading", label: "Home" },
-  { key: "hideHomeFeed", label: "Hide home feed" },
-  { key: "hideHomeHeader", label: "Hide home header and chips" },
-  { key: "hideChips", label: "Hide topic chips" },
-  { type: "heading", label: "Header" },
-  { key: "hideTopHeader", label: "Hide top header" },
-  { key: "hideNotifications", label: "Hide notification bell", nested: true },
-  { type: "heading", label: "Watch page" },
-  { key: "hideVideoSidebar", label: "Hide entire video sidebar" },
-  {
-    key: "expandVideoPlayer",
-    label: "Expand player width",
-    nested: true,
-    disabledWhen: "hideVideoSidebarOff",
-  },
-  { key: "hideRecommended", label: "Hide recommended videos", nested: true },
-  { key: "hideLiveChat", label: "Hide live chat", nested: true },
-  { key: "hidePlaylist", label: "Hide playlists", nested: true },
-  { key: "hideAutoplay", label: "Hide autoplay controls", nested: true },
-  { key: "disableAutoplay", label: "Disable autoplay", nested: true },
-  { key: "hideVideoInfo", label: "Hide video info" },
-  {
-    key: "hideVideoButtonsBar",
-    label: "Hide video buttons bar",
-    nested: true,
-    disabledWhen: "hideVideoInfoOn",
-  },
-  {
-    key: "hideChannel",
-    label: "Hide channel and subscribe button",
-    nested: true,
-    disabledWhen: "hideVideoInfoOn",
-  },
-  {
-    key: "hideDescription",
-    label: "Hide video description",
-    nested: true,
-    disabledWhen: "hideVideoInfoOn",
-  },
-  { key: "hideComments", label: "Hide comments" },
-  { type: "heading", label: "Suggestions" },
-  { key: "hideEndScreenFeed", label: "Hide end screen videowall" },
-  { key: "hideEndScreenCards", label: "Hide end screen cards" },
+  { key: "enabled", label: "Enable Shorts Blocker" },
   { key: "hideShorts", label: "Hide Shorts" },
-  { key: "hideMixes", label: "Hide Mix radio playlists" },
-  { key: "disableAnnotations", label: "Disable annotations" },
-  { key: "hideRelatedSearches", label: "Hide irrelevant search results" },
-  { type: "heading", label: "Navigation and promos" },
-  { key: "hideExplore", label: "Hide Explore links" },
-  { key: "hideExploreFeed", label: "Hide and redirect Explore/Trending" },
-  { key: "hideSubscriptions", label: "Hide and redirect Subscriptions" },
-  { key: "hideFundraiser", label: "Hide fundraisers and donations" },
-  { key: "hideMerch", label: "Hide merch, tickets, offers" },
-  { key: "hideRecommendationShelves", label: "Hide More from YouTube" },
-  { key: "hideAds", label: "Hide ads and promos" },
 ];
 
 const backgrounds = [
@@ -844,12 +753,6 @@ function normalizeUnhookSettings(settings = {}) {
     }
   });
 
-  if (
-    Object.prototype.hasOwnProperty.call(settings, "hideAutoplay") &&
-    !Object.prototype.hasOwnProperty.call(settings, "disableAutoplay")
-  ) {
-    normalized.disableAutoplay = Boolean(settings.hideAutoplay);
-  }
 
   return normalized;
 }
@@ -863,18 +766,9 @@ function createUnhookToggleRow(option, settings) {
     return heading;
   }
 
-  const isDisabled =
-    option.disabledWhen === "hideVideoSidebarOff"
-      ? !settings.hideVideoSidebar
-      : option.disabledWhen === "hideVideoInfoOn"
-        ? settings.hideVideoInfo
-        : false;
-
   const label = document.createElement("label");
   label.className =
-    "flex items-center justify-between gap-3 rounded-field px-2 py-2 hover:bg-base-200" +
-    (option.nested ? " ml-4 border-l border-base-300 pl-3" : "") +
-    (isDisabled ? " cursor-not-allowed opacity-45" : " cursor-pointer");
+    "flex cursor-pointer items-center justify-between gap-3 rounded-field px-2 py-2 hover:bg-base-200";
 
   const text = document.createElement("span");
   text.className = "min-w-0";
@@ -885,7 +779,7 @@ function createUnhookToggleRow(option, settings) {
   input.className = "toggle toggle-primary toggle-sm";
   input.dataset.unhookSetting = option.key;
   input.checked = Boolean(settings[option.key]);
-  input.disabled = isDisabled;
+
 
   label.append(text, input);
   return label;
@@ -1147,13 +1041,6 @@ function setupEventListeners() {
       }
 
       const settings = readUnhookSettingsFromForm();
-
-      if (input.dataset.unhookSetting === "hideVideoSidebar") {
-        SIDEBAR_CHILD_SETTING_KEYS.forEach((key) => {
-          settings[key] = input.checked;
-        });
-      }
-
       renderUnhookSettings(settings);
     });
   }
